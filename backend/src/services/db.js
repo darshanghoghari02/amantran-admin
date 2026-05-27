@@ -35,9 +35,10 @@ class DatabaseService {
         credential: admin.credential.cert(serviceAccount)
       });
       
-      this.db = admin.firestore();
+      const dbId = process.env.FIREBASE_DATABASE_ID || undefined;
+      this.db = dbId ? admin.firestore(dbId) : admin.firestore();
       this.isFirebase = true;
-      console.log('🔥 Connected successfully to Firebase Firestore.');
+      console.log('🔥 Connected successfully to Firebase Firestore.', dbId ? `Database instance: ${dbId}` : 'Database instance: (default)');
     } catch (error) {
       console.warn('⚠️ Firebase Credentials not found or invalid. Falling back to LOCAL JSON DB Mode.');
       console.log(`📁 Local database path: ${LOCAL_DB_PATH}`);

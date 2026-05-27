@@ -1557,6 +1557,8 @@ interface CanvasState {
   redoStack: TemplatePage[][];
   autosaveStatus: 'idle' | 'saving' | 'saved' | 'error';
   selectedLanguage: string;
+  imageChooserElementId: string | null;
+  isImageChooserOpen: boolean;
 
   // Actions
   setTemplate: (template: Template | null) => void;
@@ -1565,6 +1567,7 @@ interface CanvasState {
   setZoom: (zoom: number) => void;
   setAutosaveStatus: (status: 'idle' | 'saving' | 'saved' | 'error') => void;
   setSelectedLanguage: (lang: string) => void;
+  setImageChooserOpen: (isOpen: boolean, elementId?: string | null) => void;
 
   // Element Actions
   addElement: (element: Omit<CanvasElement, 'id' | 'zIndex'>) => void;
@@ -1601,6 +1604,11 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   redoStack: [],
   autosaveStatus: 'idle',
   selectedLanguage: 'English',
+  imageChooserElementId: null,
+  isImageChooserOpen: false,
+
+  setImageChooserOpen: (isImageChooserOpen, imageChooserElementId = null) =>
+    set({ isImageChooserOpen, imageChooserElementId }),
 
   setTemplate: (template) => {
     const healed = healTemplate(template);

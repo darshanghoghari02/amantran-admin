@@ -12,6 +12,7 @@ import languageRoutes from './src/routes/languages.js';
 import userRoutes from './src/routes/users.js';
 import analyticsRoutes from './src/routes/analytics.js';
 import uploadRoutes from './src/routes/uploads.js';
+import { dbService } from './src/services/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -86,9 +87,10 @@ app.get('/', (req, res) => {
   res.json({
     name: 'Amantran CMS Admin Backend API',
     version: '1.0.0',
-    mode: 'dual-mode',
+    mode: dbService.isFirebase ? 'firebase' : 'local',
+    isFirebase: dbService.isFirebase,
     status: 'online',
-    assetsUrl: `http://localhost:${PORT}/assets`
+    assetsUrl: `${req.protocol}://${req.get('host')}/assets`
   });
 });
 

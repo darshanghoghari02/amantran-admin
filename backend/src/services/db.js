@@ -19,18 +19,25 @@ class DatabaseService {
 
   async init() {
     try {
-      // Check if service account file exists
-      await fs.access(FIREBASE_KEY_PATH);
+      let serviceAccount;
+
+      // Try loading from environment variable first (standard for production/Render)
+      if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+      } else {
+        // Fallback to checking and reading local file
+        await fs.access(FIREBASE_KEY_PATH);
+        serviceAccount = JSON.parse(await fs.readFile(FIREBASE_KEY_PATH, 'utf-8'));
+      }
       
       // Initialize Firebase Admin
-      const serviceAccount = JSON.parse(await fs.readFile(FIREBASE_KEY_PATH, 'utf-8'));
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount)
       });
       
       this.db = admin.firestore();
       this.isFirebase = true;
-      console.log('🔥 Connect successfully to Firebase Firestore.');
+      console.log('🔥 Connected successfully to Firebase Firestore.');
     } catch (error) {
       console.warn('⚠️ Firebase Credentials not found or invalid. Falling back to LOCAL JSON DB Mode.');
       console.log(`📁 Local database path: ${LOCAL_DB_PATH}`);

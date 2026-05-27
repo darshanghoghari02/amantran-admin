@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Rasa:ital,wght@0,300..700;1,300..700&family=Hind+Vadodara:wght@300;400;500;600;700&family=Farsan&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FDFBF7;
+}
+::-webkit-scrollbar-thumb {
+  background: #FFD1D7;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B86B77;
+}
+
+body {
+  background-color: #FDFBF7;
+  color: #1E1D1E;
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom font styling KAP011 (fallback to beautiful playfair display serif) */
+@font-face {
+  font-family: 'KAP011';
+  src: local('Playfair Display'), local('Georgia');
+}
+
+.font-kap011 {
+  font-family: 'KAP011', 'Playfair Display', serif;
+}
+
+/* Custom CSS Helpers for canvas guides */
+.canvas-grid-pattern {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+}
+
+.text-stroke-gold {
+  -webkit-text-stroke: 1px #D4AF37;
+}

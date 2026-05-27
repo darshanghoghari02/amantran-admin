@@ -1,3 +1,4 @@
+import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { 
   X, 
@@ -222,7 +223,7 @@ export default function PreviewModal({
                         {/* Page background image */}
                         {currentPage.backgroundImage && (
                           <img 
-                            src={`http://localhost:5000${currentPage.backgroundImage}`} 
+                            src={`${API_URL}${currentPage.backgroundImage}`} 
                             alt="Background card template" 
                             className="absolute inset-0 w-full h-full object-cover pointer-events-none"
                           />
@@ -264,7 +265,7 @@ export default function PreviewModal({
                                 </div>
                               ) : (
                                 <img 
-                                  src={`http://localhost:5000${elem.imagePath}`} 
+                                  src={`${API_URL}${elem.imagePath}`} 
                                   alt="Icon Graphic decal" 
                                   className="w-full h-full object-contain pointer-events-none select-none"
                                   onError={(e) => {
@@ -357,7 +358,7 @@ export default function PreviewModal({
                   >
                     {p.backgroundImage && (
                       <img 
-                        src={`http://localhost:5000${p.backgroundImage}`} 
+                        src={`${API_URL}${p.backgroundImage}`} 
                         alt="Bg template" 
                         className="absolute inset-0 w-full h-full object-cover pointer-events-none" 
                       />
@@ -398,7 +399,7 @@ export default function PreviewModal({
                             </div>
                           ) : (
                             <img 
-                              src={`http://localhost:5000${elem.imagePath}`} 
+                              src={`${API_URL}${elem.imagePath}`} 
                               alt="Element Graphic icon" 
                               className="w-full h-full object-contain pointer-events-none select-none"
                               onError={(e) => {

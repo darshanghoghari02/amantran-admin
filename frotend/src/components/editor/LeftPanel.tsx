@@ -1,3 +1,4 @@
+import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { 
   Type, 
@@ -304,7 +305,7 @@ export default function LeftPanel() {
 
     try {
       // Direct call to local asset upload system (routes to backend/assets/images/wedding/royal_wedding)
-      const res = await fetch(`http://localhost:5000/api/uploads/single?type=template&categorySlug=wedding&templateSlug=${template.slug}`, {
+      const res = await fetch(`${API_URL}/api/uploads/single?type=template&categorySlug=wedding&templateSlug=${template.slug}`, {
         method: 'POST',
         body: formData
       });
@@ -331,7 +332,7 @@ export default function LeftPanel() {
     formData.append('file', file);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/uploads/single?type=template&categorySlug=wedding&templateSlug=${template.slug}`, {
+      const res = await fetch(`${API_URL}/api/uploads/single?type=template&categorySlug=wedding&templateSlug=${template.slug}`, {
         method: 'POST',
         body: formData
       });
@@ -526,7 +527,7 @@ export default function LeftPanel() {
                   className="aspect-square p-4 bg-wedding-pink-light/20 hover:bg-wedding-pink-light/40 border border-wedding-pink-medium/30 hover:border-wedding-pink-dark rounded-2xl flex items-center justify-center transition-all group relative"
                 >
                   <img 
-                    src={`http://localhost:5000${st}`} 
+                    src={`${API_URL}${st}`} 
                     alt="Sticker stamp" 
                     className="w-16 h-16 object-contain group-hover:scale-110 transition-transform duration-300"
                     onError={(e) => {
@@ -569,7 +570,7 @@ export default function LeftPanel() {
                       className="aspect-square bg-gray-50 border border-wedding-pink-medium/30 hover:border-wedding-pink-dark rounded-xl overflow-hidden shadow-sm flex items-center justify-center p-1 transition-all group"
                     >
                       <img 
-                        src={`http://localhost:5000${photo}`} 
+                        src={`${API_URL}${photo}`} 
                         alt="Uploaded" 
                         className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform" 
                       />
@@ -697,7 +698,7 @@ export default function LeftPanel() {
               {template.pages[selectedPageIndex]?.backgroundImage ? (
                 <div className="relative group rounded-2xl overflow-hidden border border-wedding-pink-medium/40 aspect-[9/16] max-h-48 bg-gray-50 flex items-center justify-center">
                   <img 
-                    src={`http://localhost:5000${template.pages[selectedPageIndex].backgroundImage}`} 
+                    src={`${API_URL}${template.pages[selectedPageIndex].backgroundImage}`} 
                     alt="Background" 
                     className="w-full h-full object-cover" 
                   />

@@ -1,3 +1,4 @@
+import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { 
   Users as UsersIcon, 
@@ -24,8 +25,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     async function fetchDashboardData() {
       try {
         const [resSummary, resCharts] = await Promise.all([
-          fetch('http://localhost:5000/api/analytics/summary'),
-          fetch('http://localhost:5000/api/analytics/charts')
+          fetch(`${API_URL}/api/analytics/summary`),
+          fetch(`${API_URL}/api/analytics/charts`)
         ]);
         
         const summaryData = await resSummary.json();

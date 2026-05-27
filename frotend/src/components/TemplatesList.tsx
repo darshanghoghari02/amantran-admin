@@ -1,3 +1,4 @@
+import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { 
   PlusCircle, 
@@ -52,10 +53,10 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
     try {
       const catParam = selectedCatId ? `?categoryId=${selectedCatId}` : '';
       const [resTpl, resCat, resFont, resLang] = await Promise.all([
-        fetch(`http://localhost:5000/api/templates${catParam}`),
-        fetch('http://localhost:5000/api/categories'),
-        fetch('http://localhost:5000/api/fonts'),
-        fetch('http://localhost:5000/api/languages')
+        fetch(`${API_URL}/api/templates${catParam}`),
+        fetch(`${API_URL}/api/categories`),
+        fetch(`${API_URL}/api/fonts`),
+        fetch(`${API_URL}/api/languages`)
       ]);
 
       const tplData = await resTpl.json();
@@ -113,7 +114,7 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
       if (thumbnailFile) {
         const thumbData = new FormData();
         thumbData.append('file', thumbnailFile);
-        const resThumb = await fetch(`http://localhost:5000/api/uploads/single?type=template&categorySlug=${catSlug}&templateSlug=${cleanTplSlug}`, {
+        const resThumb = await fetch(`${API_URL}/api/uploads/single?type=template&categorySlug=${catSlug}&templateSlug=${cleanTplSlug}`, {
           method: 'POST',
           body: thumbData
         });
@@ -129,7 +130,7 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
         for (let i = 0; i < bgFiles.length; i++) {
           bgData.append('files', bgFiles[i]);
         }
-        const resBg = await fetch(`http://localhost:5000/api/uploads/multiple?type=template&categorySlug=${catSlug}&templateSlug=${cleanTplSlug}`, {
+        const resBg = await fetch(`${API_URL}/api/uploads/multiple?type=template&categorySlug=${catSlug}&templateSlug=${cleanTplSlug}`, {
           method: 'POST',
           body: bgData
         });
@@ -1695,7 +1696,7 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
         pages: initialPages
       };
 
-      const res = await fetch('http://localhost:5000/api/templates', {
+      const res = await fetch(`${API_URL}/api/templates`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -1718,7 +1719,7 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
 
   const handleDuplicate = async (id: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/templates/${id}/duplicate`, {
+      const res = await fetch(`${API_URL}/api/templates/${id}/duplicate`, {
         method: 'POST'
       });
       if (res.ok) {
@@ -1733,7 +1734,7 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
     if (!confirm('Are you sure you want to delete this template? All designed card pages and elements will be lost.')) return;
     
     try {
-      const res = await fetch(`http://localhost:5000/api/templates/${id}`, {
+      const res = await fetch(`${API_URL}/api/templates/${id}`, {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -1746,7 +1747,7 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
 
   const handleToggleState = async (id: string, activeState: boolean) => {
     try {
-      await fetch(`http://localhost:5000/api/templates/${id}`, {
+      await fetch(`${API_URL}/api/templates/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !activeState })
@@ -1830,7 +1831,7 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                 {/* Visual Thumbnail Frame */}
                 <div className="aspect-[4/5] bg-gray-50 border-b border-wedding-pink-medium/20 relative overflow-hidden flex items-center justify-center">
                   <img 
-                    src={tpl.thumbnail.startsWith('/') ? `http://localhost:5000${tpl.thumbnail}` : tpl.thumbnail} 
+                    src={tpl.thumbnail.startsWith('/') ? `${API_URL}${tpl.thumbnail}` : tpl.thumbnail} 
                     alt={tpl.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />

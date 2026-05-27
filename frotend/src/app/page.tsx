@@ -1,5 +1,6 @@
 'use client';
 
+import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { Heart, Lock, Mail, Server } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
@@ -31,7 +32,7 @@ export default function RootPage() {
   useEffect(() => {
     async function checkBackend() {
       try {
-        const res = await fetch('http://localhost:5000/');
+        const res = await fetch(`${API_URL}/`);
         const data = await res.json();
         setBackendStatus('online');
         setIsFirebase(data.mode === 'firebase' || data.isFirebase === true);

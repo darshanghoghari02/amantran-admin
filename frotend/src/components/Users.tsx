@@ -1,3 +1,4 @@
+import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { Search, ShieldAlert, CheckCircle, ShieldCheck, Trash2, Users as UsersIcon } from 'lucide-react';
 import { User } from '../types';
@@ -18,7 +19,7 @@ export default function Users() {
       if (searchQuery) params.append('query', searchQuery);
       if (selectedRole) params.append('role', selectedRole);
 
-      const res = await fetch(`http://localhost:5000/api/users?${params.toString()}`);
+      const res = await fetch(`${API_URL}/api/users?${params.toString()}`);
       const data = await res.json();
       setUsers(data);
     } catch (error) {
@@ -30,7 +31,7 @@ export default function Users() {
 
   const handleToggleBlock = async (id: string, currentlyBlocked: boolean) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${id}`, {
+      const res = await fetch(`${API_URL}/api/users/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isBlocked: !currentlyBlocked })
@@ -47,7 +48,7 @@ export default function Users() {
     if (!confirm('Are you sure you want to delete this user profile? All associated draft records will be permanently removed.')) return;
     
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${id}`, {
+      const res = await fetch(`${API_URL}/api/users/${id}`, {
         method: 'DELETE'
       });
       if (res.ok) {

@@ -1,3 +1,4 @@
+import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Trash2, CheckCircle2, XCircle, Globe } from 'lucide-react';
 import { Language } from '../types';
@@ -18,7 +19,7 @@ export default function Languages() {
 
   async function fetchLanguages() {
     try {
-      const res = await fetch('http://localhost:5000/api/languages');
+      const res = await fetch(`${API_URL}/api/languages`);
       const data = await res.json();
       setLanguages(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -39,7 +40,7 @@ export default function Languages() {
     const payload = { code, name, isActive };
 
     try {
-      const res = await fetch('http://localhost:5000/api/languages', {
+      const res = await fetch(`${API_URL}/api/languages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -59,7 +60,7 @@ export default function Languages() {
 
   const handleToggle = async (id: string, activeState: boolean) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/languages/${id}`, {
+      const res = await fetch(`${API_URL}/api/languages/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !activeState })
@@ -76,7 +77,7 @@ export default function Languages() {
     if (!confirm('Are you sure you want to delete this language? Templates using this language will lose their translation metadata.')) return;
     
     try {
-      const res = await fetch(`http://localhost:5000/api/languages/${id}`, {
+      const res = await fetch(`${API_URL}/api/languages/${id}`, {
         method: 'DELETE'
       });
       if (res.ok) {

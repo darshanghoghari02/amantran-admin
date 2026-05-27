@@ -1,3 +1,4 @@
+import { API_URL } from '@/config';
 export const LANGUAGE_CODE_MAP: Record<string, string> = {
   English: 'en',
   english: 'en',
@@ -63,7 +64,7 @@ export async function translateText(
   if (sourceCode !== 'auto' && targetCode === sourceCode) return text;
 
   try {
-    const res = await fetch('http://localhost:5000/api/translate', {
+    const res = await fetch(`${API_URL}/api/translate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

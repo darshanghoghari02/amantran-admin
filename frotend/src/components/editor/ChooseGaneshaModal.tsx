@@ -1,3 +1,4 @@
+import { API_URL } from '@/config';
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, Loader2 } from 'lucide-react';
 import { useCanvasStore } from '../../store/canvasStore';
@@ -78,7 +79,7 @@ export default function ChooseGaneshaModal() {
     formData.append('file', file);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/uploads/single?type=template&categorySlug=wedding&templateSlug=${template.slug}`, {
+      const res = await fetch(`${API_URL}/api/uploads/single?type=template&categorySlug=wedding&templateSlug=${template.slug}`, {
         method: 'POST',
         body: formData
       });
@@ -124,7 +125,7 @@ export default function ChooseGaneshaModal() {
             }`}
           >
             <img
-              src="http://localhost:5000/assets/images/stickers/ganesh4.png"
+              src={`${API_URL}/assets/images/stickers/ganesh4.png`}
               alt="Ganesha Red Outline"
               className="w-full h-full object-contain"
               onError={(e) => {
@@ -143,7 +144,7 @@ export default function ChooseGaneshaModal() {
             }`}
           >
             <img
-              src="http://localhost:5000/assets/images/stickers/ganesh2.png"
+              src={`${API_URL}/assets/images/stickers/ganesh2.png`}
               alt="Ganesha Colorful"
               className="w-full h-full object-contain"
               onError={(e) => {
@@ -162,7 +163,7 @@ export default function ChooseGaneshaModal() {
             }`}
           >
             <img
-              src="http://localhost:5000/assets/images/stickers/ganesh3.png"
+              src={`${API_URL}/assets/images/stickers/ganesh3.png`}
               alt="Ganesha Golden"
               className="w-full h-full object-contain"
               onError={(e) => {
@@ -194,7 +195,7 @@ export default function ChooseGaneshaModal() {
               <Loader2 className="w-[18px] h-[18px] animate-spin text-[#F94C66]" />
             ) : selectedKey === 'uploaded' && customImage ? (
               <img
-                src={`http://localhost:5000${customImage}`}
+                src={`${API_URL}${customImage}`}
                 alt="Custom uploaded"
                 className="w-full h-full object-contain"
               />

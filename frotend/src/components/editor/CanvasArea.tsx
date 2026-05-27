@@ -1,3 +1,4 @@
+import { API_URL } from '@/config';
 import React, { useRef, useCallback } from 'react';
 import { useCanvasStore } from '../../store/canvasStore';
 import { CanvasElement } from '../../types';
@@ -400,7 +401,7 @@ export default function CanvasArea() {
           {/* Background image */}
           {currentPage.backgroundImage && (
             <img
-              src={`http://localhost:5000${currentPage.backgroundImage}`}
+              src={`${API_URL}${currentPage.backgroundImage}`}
               alt="Page background"
               style={{
                 position: 'absolute',
@@ -496,7 +497,7 @@ export default function CanvasArea() {
                 ) : (
                   /* ── Sticker / Image ── */
                   <img
-                    src={`http://localhost:5000${elem.imagePath}`}
+                    src={`${API_URL}${elem.imagePath}`}
                     alt="Element"
                     draggable={false}
                     style={{

@@ -1,3 +1,4 @@
+import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Edit3, Trash2, CheckCircle2, XCircle, Upload, Eye } from 'lucide-react';
 import { Category } from '../types';
@@ -22,7 +23,7 @@ export default function Categories() {
 
   async function fetchCategories() {
     try {
-      const res = await fetch('http://localhost:5000/api/categories');
+      const res = await fetch(`${API_URL}/api/categories`);
       const data = await res.json();
       setCategories(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -73,7 +74,7 @@ export default function Categories() {
 
     try {
       // Direct call to local asset upload system
-      const res = await fetch(`http://localhost:5000/api/uploads/single?type=category&categorySlug=${cleanSlug}`, {
+      const res = await fetch(`${API_URL}/api/uploads/single?type=category&categorySlug=${cleanSlug}`, {
         method: 'POST',
         body: formData
       });
@@ -109,13 +110,13 @@ export default function Categories() {
     try {
       let res;
       if (editingId) {
-        res = await fetch(`http://localhost:5000/api/categories/${editingId}`, {
+        res = await fetch(`${API_URL}/api/categories/${editingId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
       } else {
-        res = await fetch('http://localhost:5000/api/categories', {
+        res = await fetch(`${API_URL}/api/categories`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -138,7 +139,7 @@ export default function Categories() {
     if (!confirm('Are you sure you want to delete this category? This will affect associated templates.')) return;
     
     try {
-      const res = await fetch(`http://localhost:5000/api/categories/${id}`, {
+      const res = await fetch(`${API_URL}/api/categories/${id}`, {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -191,7 +192,7 @@ export default function Categories() {
                     {cat.imageUrl ? (
                       <div className="w-14 h-10 rounded-lg overflow-hidden border border-wedding-pink-medium/40 bg-gray-100 flex items-center justify-center">
                         <img 
-                          src={cat.imageUrl.startsWith('/') ? `http://localhost:5000${cat.imageUrl}` : cat.imageUrl} 
+                          src={cat.imageUrl.startsWith('/') ? `${API_URL}${cat.imageUrl}` : cat.imageUrl} 
                           alt={cat.name} 
                           className="w-full h-full object-cover"
                         />
@@ -327,7 +328,7 @@ export default function Categories() {
                   {imageUrl ? (
                     <div className="w-24 h-16 rounded-xl overflow-hidden border border-wedding-pink-medium/50 shadow-sm relative group bg-gray-100 flex items-center justify-center">
                       <img 
-                        src={imageUrl.startsWith('/') ? `http://localhost:5000${imageUrl}` : imageUrl} 
+                        src={imageUrl.startsWith('/') ? `${API_URL}${imageUrl}` : imageUrl} 
                         alt="Preview" 
                         className="w-full h-full object-cover"
                       />

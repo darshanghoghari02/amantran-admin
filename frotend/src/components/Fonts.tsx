@@ -1,3 +1,4 @@
+import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Trash2, CheckCircle2, XCircle, Upload, Type } from 'lucide-react';
 import { CustomFont } from '../types';
@@ -19,7 +20,7 @@ export default function Fonts() {
 
   async function fetchFonts() {
     try {
-      const res = await fetch('http://localhost:5000/api/fonts');
+      const res = await fetch(`${API_URL}/api/fonts`);
       const data = await res.json();
       setFonts(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -40,7 +41,7 @@ export default function Fonts() {
 
     try {
       // Direct call to local asset upload system (routes to backend/assets/fonts)
-      const res = await fetch('http://localhost:5000/api/uploads/single?type=font', {
+      const res = await fetch(`${API_URL}/api/uploads/single?type=font`, {
         method: 'POST',
         body: formData
       });
@@ -79,7 +80,7 @@ export default function Fonts() {
     };
 
     try {
-      const res = await fetch('http://localhost:5000/api/fonts', {
+      const res = await fetch(`${API_URL}/api/fonts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -99,7 +100,7 @@ export default function Fonts() {
 
   const handleToggle = async (id: string, activeState: boolean) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/fonts/${id}`, {
+      const res = await fetch(`${API_URL}/api/fonts/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !activeState })
@@ -116,7 +117,7 @@ export default function Fonts() {
     if (!confirm('Are you sure you want to delete this font? Templates using this font will fall back to default typography.')) return;
     
     try {
-      const res = await fetch(`http://localhost:5000/api/fonts/${id}`, {
+      const res = await fetch(`${API_URL}/api/fonts/${id}`, {
         method: 'DELETE'
       });
       if (res.ok) {

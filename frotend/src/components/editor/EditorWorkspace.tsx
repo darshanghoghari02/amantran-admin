@@ -1,3 +1,4 @@
+import { API_URL } from '@/config';
 import React, { useEffect, useState } from 'react';
 import {
   ArrowLeft,
@@ -56,7 +57,7 @@ export default function EditorWorkspace({ onClose }: EditorWorkspaceProps) {
 
     const delayDebounceFn = setTimeout(async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/templates/${template.id}`, {
+        const res = await fetch(`${API_URL}/api/templates/${template.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(template)
@@ -231,7 +232,7 @@ export default function EditorWorkspace({ onClose }: EditorWorkspaceProps) {
     setAutosaveStatus('saving');
 
     try {
-      const res = await fetch(`http://localhost:5000/api/templates/${template.id}`, {
+      const res = await fetch(`${API_URL}/api/templates/${template.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(template)

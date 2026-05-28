@@ -37,7 +37,7 @@ export default function RootPage() {
         const res = await fetch(`${API_URL}/`);
         const data = await res.json();
         setBackendStatus('online');
-        setIsFirebase(data.mode === 'firebase' || data.isFirebase === true);
+        setIsFirebase(data.mode === 'firebase' || data.mode === 'dual-mode' || data.isFirebase === true);
         
         // If successfully online, check less frequently (every 30 seconds)
         if (data.status === 'online') {

@@ -13,7 +13,17 @@ const ASSETS_DIR = path.join(BACKEND_DIR, 'assets');
 function deleteLocalFile(filePath) {
   if (!filePath) return;
   try {
-    const cleanPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+    let relativePath = filePath;
+    // If it's a full URL, extract the pathname part (e.g. /assets/...)
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      try {
+        const urlObj = new URL(filePath);
+        relativePath = urlObj.pathname;
+      } catch (e) {
+        // ignore parsing error
+      }
+    }
+    const cleanPath = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
     const absolutePath = path.join(BACKEND_DIR, cleanPath);
     if (absolutePath.startsWith(ASSETS_DIR) && fs.existsSync(absolutePath)) {
       fs.unlinkSync(absolutePath);
@@ -194,6 +204,26 @@ router.delete('/:id', async (req, res) => {
       template.previewImages.forEach(p => allPaths.add(p));
     }
 
+    // Dynamic scanning: find any background images or custom sticker/ganesh images in the pages array
+    if (Array.isArray(template.pages)) {
+      template.pages.forEach(page => {
+        if (page.backgroundImage) {
+          allPaths.add(page.backgroundImage);
+        }
+        if (Array.isArray(page.elements)) {
+          page.elements.forEach(elem => {
+            // Include custom element stickers or uploaded overlay images specific to this template
+            if (elem.imagePath && elem.imagePath.includes(`/${template.slug}/`)) {
+              allPaths.add(elem.imagePath);
+            }
+            if (elem.imageUrl && elem.imageUrl.includes(`/${template.slug}/`)) {
+              allPaths.add(elem.imageUrl);
+            }
+          });
+        }
+      });
+    }
+
     // Step 3: Delete each file from disk
     allPaths.forEach(filePath => deleteLocalFile(filePath));
 
@@ -208,7 +238,7 @@ router.delete('/:id', async (req, res) => {
       }
     }
 
-    // Step 5: Delete DB record
+    // Step 5: Delete DB record (including recursive Firestore subcollections)
     await dbService.delete('templates', req.params.id);
     res.json({
       success: true,

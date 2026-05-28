@@ -561,11 +561,35 @@ class DatabaseService {
     }
   }
 
+  async deleteTemplateSubcollections(templateId) {
+    if (!this.isFirebase || !this.db) return;
+    try {
+      const templateRef = this.db.collection('templates').doc(templateId);
+      const pagesSnapshot = await templateRef.collection('pages').get();
+      
+      for (const pageDoc of pagesSnapshot.docs) {
+        // Delete all elements in this page's subcollection
+        const elementsSnapshot = await pageDoc.ref.collection('elements').get();
+        for (const elemDoc of elementsSnapshot.docs) {
+          await elemDoc.ref.delete();
+        }
+        // Delete the page document itself
+        await pageDoc.ref.delete();
+      }
+      console.log(`🗑️ Recursively deleted Firestore pages & elements subcollections for template: ${templateId}`);
+    } catch (err) {
+      console.error(`⚠️ Failed to recursively delete subcollections for template ${templateId}:`, err.message);
+    }
+  }
+
   // Generic Delete Document
   async delete(collectionName, id) {
     await this.initPromise;
     if (this.isFirebase) {
       try {
+        if (collectionName === 'templates') {
+          await this.deleteTemplateSubcollections(id);
+        }
         await this.db.collection(collectionName).doc(id).delete();
         return true;
       } catch (error) {

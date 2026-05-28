@@ -155,7 +155,12 @@ export default function RootPage() {
       {/* Central content screen wrapper */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Dynamic header Topbar */}
-        <Topbar currentTab={currentTab} isFirebase={isFirebase} />
+        <Topbar 
+          currentTab={currentTab} 
+          isFirebase={isFirebase} 
+          backendStatus={backendStatus} 
+          apiUrl={API_URL} 
+        />
 
         {/* Dynamic content rendering body */}
         <main className="flex-1 p-8 overflow-y-auto bg-wedding-bg">

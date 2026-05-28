@@ -16,6 +16,43 @@ interface DashboardProps {
   onNavigate: (tab: string) => void;
 }
 
+const MOCK_STATS_FALLBACK = {
+  counters: {
+    totalUsers: 18,
+    totalTemplates: 4,
+    totalCategories: 4,
+    premiumTemplates: 2,
+    totalInvitations: 45,
+    totalDrafts: 12
+  },
+  recentActivities: [
+    { id: '1', action: 'New Template "Royal Wedding" created', user: 'Vicky Patel', time: '2 hours ago' },
+    { id: '2', action: 'User registered: ramesh.patel@gmail.com', user: 'System', time: '5 hours ago' },
+    { id: '3', action: 'Font "Hind Vadodara" updated', user: 'Sneha Sharma', time: '1 day ago' }
+  ],
+  topTemplates: [
+    { id: '1', name: 'Royal Wedding Cover', isPremium: true, downloads: 340 },
+    { id: '2', name: 'Elegant Floral Invitation', isPremium: false, downloads: 210 }
+  ]
+};
+
+const MOCK_CHARTS_FALLBACK = {
+  userGrowthTrend: [
+    { month: 'Jan', users: 120 },
+    { month: 'Feb', users: 240 },
+    { month: 'Mar', users: 380 },
+    { month: 'Apr', users: 510 },
+    { month: 'May', users: 720 },
+    { month: 'Jun', users: 950 }
+  ],
+  categoryDistribution: [
+    { name: 'Wedding', count: 8 },
+    { name: 'Engagement', count: 4 },
+    { name: 'Baby Shower', count: 3 },
+    { name: 'Reception', count: 5 }
+  ]
+};
+
 export default function Dashboard({ onNavigate }: DashboardProps) {
   const [stats, setStats] = useState<any>(null);
   const [charts, setCharts] = useState<any>(null);
@@ -35,7 +72,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         setStats(summaryData);
         setCharts(chartsData);
       } catch (error) {
-        console.error('Failed to load dashboard analytics:', error);
+        console.error('Failed to load dashboard analytics, using offline fallback:', error);
+        setStats(MOCK_STATS_FALLBACK);
+        setCharts(MOCK_CHARTS_FALLBACK);
       } finally {
         setLoading(false);
       }

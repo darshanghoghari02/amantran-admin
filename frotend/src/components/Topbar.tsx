@@ -4,9 +4,11 @@ import { Cloud, CloudOff, RefreshCw } from 'lucide-react';
 interface TopbarProps {
   currentTab: string;
   isFirebase: boolean;
+  backendStatus?: 'checking' | 'online' | 'offline';
+  apiUrl?: string;
 }
 
-export default function Topbar({ currentTab, isFirebase }: TopbarProps) {
+export default function Topbar({ currentTab, isFirebase, backendStatus, apiUrl }: TopbarProps) {
   const getTitle = () => {
     switch (currentTab) {
       case 'dashboard': return 'Dashboard Overview';
@@ -38,10 +40,17 @@ export default function Topbar({ currentTab, isFirebase }: TopbarProps) {
               Live Firestore Mode
             </span>
           ) : (
-            <span className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 text-xs font-semibold rounded-full border border-amber-200 shadow-sm animate-pulse">
-              <CloudOff className="w-3.5 h-3.5" />
-              Local JSON Database Fallback
-            </span>
+            <div className="flex flex-col items-end gap-1">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 text-xs font-semibold rounded-full border border-amber-200 shadow-sm">
+                <CloudOff className="w-3.5 h-3.5" />
+                Local JSON Database Fallback
+              </span>
+              {apiUrl && (
+                <span className="text-[10px] text-gray-400 font-mono">
+                  Target: {apiUrl}
+                </span>
+              )}
+            </div>
           )}
         </div>
 

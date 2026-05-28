@@ -30,20 +30,34 @@ export default function RootPage() {
 
   // Check backend server connection on boot
   useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
     async function checkBackend() {
       try {
         const res = await fetch(`${API_URL}/`);
         const data = await res.json();
         setBackendStatus('online');
         setIsFirebase(data.mode === 'firebase' || data.isFirebase === true);
+        
+        // If successfully online, check less frequently (every 30 seconds)
+        if (data.status === 'online') {
+          clearInterval(intervalId);
+          intervalId = setInterval(checkBackend, 30000);
+        }
       } catch (err) {
-        console.warn('Backend server is not running yet. Make sure to spin up express on port 5000.');
+        console.warn('Backend server is not running yet. Retrying...');
         setBackendStatus('offline');
         // If offline, assume local fallback mock rendering mode
         setIsFirebase(false);
       }
     }
+
     checkBackend();
+    
+    // Check every 6 seconds until backend is online
+    intervalId = setInterval(checkBackend, 6000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleLoginSubmit = (e: React.FormEvent) => {

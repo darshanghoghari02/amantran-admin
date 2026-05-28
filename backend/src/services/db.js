@@ -39,11 +39,49 @@ class DatabaseService {
       this.db = dbId ? admin.firestore(dbId) : admin.firestore();
       this.isFirebase = true;
       console.log('🔥 Connected successfully to Firebase Firestore.', dbId ? `Database instance: ${dbId}` : 'Database instance: (default)');
+      
+      // Clean up any orphaned ghost template subcollections in the background
+      this.cleanupOrphanedFirestoreTemplates();
     } catch (error) {
       console.warn('⚠️ Firebase Credentials not found or invalid. Falling back to LOCAL JSON DB Mode.');
       console.log(`📁 Local database path: ${LOCAL_DB_PATH}`);
       this.isFirebase = false;
       await this.initLocalDb();
+    }
+  }
+
+  async cleanupOrphanedFirestoreTemplates() {
+    if (!this.isFirebase || !this.db) return;
+    try {
+      console.log('🧹 Scanning Firestore for orphaned/ghost template subcollections...');
+      const templatesRef = this.db.collection('templates');
+      const docRefs = await templatesRef.listDocuments();
+      
+      let count = 0;
+      for (const docRef of docRefs) {
+        const docSnap = await docRef.get();
+        if (!docSnap.exists) {
+          console.log(`🧹 Found orphaned/ghost template document: ${docRef.id}. Cleaning up subcollections recursively...`);
+          
+          // Delete all pages in this page's subcollection
+          const pagesSnapshot = await docRef.collection('pages').get();
+          for (const pageDoc of pagesSnapshot.docs) {
+            const elementsSnapshot = await pageDoc.ref.collection('elements').get();
+            for (const elemDoc of elementsSnapshot.docs) {
+              await elemDoc.ref.delete();
+            }
+            await pageDoc.ref.delete();
+          }
+          count++;
+        }
+      }
+      if (count > 0) {
+        console.log(`✅ Successfully cleaned up ${count} orphaned template subcollection(s) from Firestore.`);
+      } else {
+        console.log('✅ No orphaned template subcollections found in Firestore.');
+      }
+    } catch (err) {
+      console.warn('⚠️ Failed to run Firestore orphaned template cleanup:', err.message);
     }
   }
 

@@ -39,13 +39,39 @@ class DatabaseService {
       
       const dbId = process.env.FIREBASE_DATABASE_ID || undefined;
       this.db = dbId ? getFirestore(app, dbId) : getFirestore(app);
-      this.isFirebase = true;
-      console.log('🔥 Connected successfully to Firebase Firestore.', dbId ? `Database instance: ${dbId}` : 'Database instance: (default)');
+      
+      try {
+        // Run a test query to verify connection and database existence
+        await this.db.collection('categories').limit(1).get();
+        this.isFirebase = true;
+        this.connectionError = null;
+        console.log('🔥 Connected successfully to Firebase Firestore.', dbId ? `Database instance: ${dbId}` : 'Database instance: (default)');
+      } catch (testError) {
+        // If it failed because a custom database was not found, try falling back to the '(default)' database
+        const isNotFoundError = testError.code === 5 || 
+                              testError.message?.includes('NOT_FOUND') || 
+                              testError.message?.toLowerCase().includes('not found');
+        
+        if (dbId && isNotFoundError) {
+          console.warn(`⚠️ Custom database ID '${dbId}' was not found. Attempting fallback to the '(default)' database...`);
+          this.db = getFirestore(app);
+          
+          // Test the default database connection
+          await this.db.collection('categories').limit(1).get();
+          this.isFirebase = true;
+          this.connectionError = `Fallback active: Custom database '${dbId}' not found. Using default database.`;
+          console.log('🔥 Connected successfully to Firebase Firestore (default database fallback).');
+        } else {
+          // If it is another error (e.g. invalid credentials), rethrow to let the main catch block handle it
+          throw testError;
+        }
+      }
       
       // Clean up any orphaned ghost template subcollections in the background
       this.cleanupOrphanedFirestoreTemplates();
     } catch (error) {
-      console.warn('⚠️ Firebase Credentials not found or invalid. Falling back to LOCAL JSON DB Mode.');
+      console.warn('⚠️ Firebase Credentials not found or invalid, or Firestore database does not exist. Falling back to LOCAL JSON DB Mode.');
+      console.error('Connection Error:', error.message || error);
       console.log(`📁 Local database path: ${LOCAL_DB_PATH}`);
       this.isFirebase = false;
       this.connectionError = error.message || String(error);

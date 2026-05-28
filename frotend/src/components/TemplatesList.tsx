@@ -29,6 +29,7 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
   const [loading, setLoading] = useState(true);
   const [selectedCatId, setSelectedCatId] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
 
   // Form State
   const [name, setName] = useState('');
@@ -1682,7 +1683,16 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
         ...finalBgsLocal.map(bg => bg.replace(/^\//, ''))
       ].filter(Boolean);
 
-      const payload = {
+      const payload = editingTemplate ? {
+        categoryId,
+        name,
+        slug: cleanTplSlug,
+        thumbnail: finalThumbnail || editingTemplate.thumbnail,
+        isPremium,
+        isActive,
+        fonts: selectedFonts,
+        languages: selectedLangs
+      } : {
         categoryId,
         name,
         slug: cleanTplSlug,
@@ -1696,14 +1706,18 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
         pages: initialPages
       };
 
-      const res = await fetch(`${API_URL}/api/templates`, {
-        method: 'POST',
+      const url = editingTemplate ? `${API_URL}/api/templates/${editingTemplate.id}` : `${API_URL}/api/templates`;
+      const method = editingTemplate ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
       if (res.ok) {
         setIsModalOpen(false);
+        setEditingTemplate(null);
         fetchInitialData();
       } else {
         const err = await res.json();
@@ -1758,7 +1772,22 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
     }
   };
 
+  const openEditModal = (tpl: Template) => {
+    setEditingTemplate(tpl);
+    setName(tpl.name);
+    setSlug(tpl.slug);
+    setCategoryId(tpl.categoryId);
+    setIsPremium(tpl.isPremium);
+    setIsActive(tpl.isActive);
+    setSelectedFonts(tpl.fonts || []);
+    setSelectedLangs(tpl.languages || []);
+    setThumbnailFile(null);
+    setBgFiles(null);
+    setIsModalOpen(true);
+  };
+
   const openAddModal = () => {
+    setEditingTemplate(null);
     setName('');
     setSlug('');
     setCategoryId(categories[0]?.id || '');
@@ -1880,7 +1909,16 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                       </span>
                       <span className="text-[10px] font-mono text-gray-400">{tpl.pages?.length || 0} pages</span>
                     </div>
-                    <h4 className="text-base font-bold text-wedding-charcoal-dark tracking-tight leading-snug">{tpl.name}</h4>
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-base font-bold text-wedding-charcoal-dark tracking-tight leading-snug">{tpl.name}</h4>
+                      <button
+                        onClick={() => openEditModal(tpl)}
+                        className="p-1.5 hover:bg-wedding-pink-light text-wedding-pink-dark rounded-lg transition-colors shrink-0"
+                        title="Edit Template Details"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                    </div>
                     <p className="text-[11px] text-gray-500 font-mono">{tpl.slug}</p>
                   </div>
 
@@ -1938,7 +1976,7 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
             <div className="p-6 bg-wedding-charcoal-dark text-white flex justify-between items-center">
               <h4 className="font-bold text-lg text-wedding-gold-light flex items-center gap-2">
                 <Palette className="w-5 h-5 text-wedding-pink-medium" />
-                Initialize Wedding Template
+                {editingTemplate ? 'Edit Template Details' : 'Initialize Wedding Template'}
               </h4>
               <button 
                 onClick={() => setIsModalOpen(false)}
@@ -2088,22 +2126,24 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                   </label>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Page Backgrounds (Multiple)</label>
-                  <label className="border border-wedding-pink-medium/40 hover:bg-wedding-pink-light/20 cursor-pointer p-4 rounded-2xl flex flex-col items-center justify-center transition-all bg-white">
-                    <Upload className="w-5 h-5 text-wedding-pink-dark mb-1" />
-                    <span className="text-[11px] font-bold text-wedding-charcoal-dark">
-                      {bgFiles ? `${bgFiles.length} files selected` : 'Select Page Backgrounds'}
-                    </span>
-                    <input 
-                      type="file" 
-                      accept="image/*"
-                      multiple
-                      onChange={(e) => setBgFiles(e.target.files)}
-                      className="hidden" 
-                    />
-                  </label>
-                </div>
+                {!editingTemplate && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Page Backgrounds (Multiple)</label>
+                    <label className="border border-wedding-pink-medium/40 hover:bg-wedding-pink-light/20 cursor-pointer p-4 rounded-2xl flex flex-col items-center justify-center transition-all bg-white">
+                      <Upload className="w-5 h-5 text-wedding-pink-dark mb-1" />
+                      <span className="text-[11px] font-bold text-wedding-charcoal-dark">
+                        {bgFiles ? `${bgFiles.length} files selected` : 'Select Page Backgrounds'}
+                      </span>
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        multiple
+                        onChange={(e) => setBgFiles(e.target.files)}
+                        className="hidden" 
+                      />
+                    </label>
+                  </div>
+                )}
               </div>
 
               {/* Submit Buttons */}
@@ -2120,7 +2160,7 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                   disabled={uploading}
                   className="px-6 py-3 rounded-2xl bg-wedding-pink-dark hover:bg-[#a0525e] text-white text-sm font-bold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {uploading ? 'Uploading assets...' : 'Generate Template'}
+                  {uploading ? 'Updating details...' : editingTemplate ? 'Update Details' : 'Generate Template'}
                 </button>
               </div>
             </form>

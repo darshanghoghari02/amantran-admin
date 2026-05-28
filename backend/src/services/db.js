@@ -32,9 +32,10 @@ class DatabaseService {
         serviceAccount = JSON.parse(await fs.readFile(FIREBASE_KEY_PATH, 'utf-8'));
       }
       
-      // Initialize Firebase Admin
+      // Initialize Firebase Admin with dynamic storageBucket configuration
       const app = admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
+        credential: admin.credential.cert(serviceAccount),
+        storageBucket: serviceAccount.project_id ? `${serviceAccount.project_id}.appspot.com` : undefined
       });
       
       const dbId = process.env.FIREBASE_DATABASE_ID || undefined;

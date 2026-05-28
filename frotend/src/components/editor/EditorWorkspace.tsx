@@ -48,35 +48,7 @@ export default function EditorWorkspace({ onClose }: EditorWorkspaceProps) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isTranslatingPage, setIsTranslatingPage] = useState(false);
 
-  // Debounced Autosave Effect
-  useEffect(() => {
-    if (!template) return;
-
-    // Set status to syncing when a change occurs
-    setAutosaveStatus('saving');
-
-    const delayDebounceFn = setTimeout(async () => {
-      try {
-        const res = await fetch(`${API_URL}/api/templates/${template.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(template)
-        });
-
-        if (res.ok) {
-          setAutosaveStatus('saved');
-          setTimeout(() => setAutosaveStatus('idle'), 2000);
-        } else {
-          setAutosaveStatus('error');
-        }
-      } catch (err) {
-        console.error('Autosave error:', err);
-        setAutosaveStatus('error');
-      }
-    }, 1500); // 1.5s debounce
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [template?.pages, template?.thumbnail, template?.localAssetPaths]);
+  // Autosave disabled at admin request - manual save only
 
   // Keyboard Shortcuts listener
   useEffect(() => {
@@ -258,26 +230,26 @@ export default function EditorWorkspace({ onClose }: EditorWorkspaceProps) {
         return (
           <span className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold rounded-lg uppercase shadow-sm">
             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-            Syncing...
+            Saving...
           </span>
         );
       case 'saved':
         return (
           <span className="flex items-center gap-1.5 px-3 py-1 bg-green-50 border border-green-200 text-green-700 text-xs font-bold rounded-lg uppercase shadow-sm">
             <Check className="w-3.5 h-3.5 text-green-600 stroke-[3]" />
-            Saved to Local
+            Saved Successfully
           </span>
         );
       case 'error':
         return (
           <span className="flex items-center gap-1.5 px-3 py-1 bg-red-50 border border-red-200 text-red-600 text-xs font-bold rounded-lg uppercase shadow-sm">
-            ✕ Sync Offline
+            ✕ Save Failed
           </span>
         );
       default:
         return (
-          <span className="flex items-center gap-1.5 px-3 py-1 bg-wedding-pink-light border border-wedding-pink-medium/30 text-wedding-pink-dark text-xs font-bold rounded-lg uppercase shadow-sm">
-            ● Autosave Enabled
+          <span className="flex items-center gap-1.5 px-3 py-1 bg-wedding-charcoal-light border border-white/10 text-gray-300 text-xs font-bold rounded-lg uppercase shadow-sm">
+            ● Manual Save Mode
           </span>
         );
     }

@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,12 +33,12 @@ class DatabaseService {
       }
       
       // Initialize Firebase Admin
-      admin.initializeApp({
+      const app = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount)
       });
       
       const dbId = process.env.FIREBASE_DATABASE_ID || undefined;
-      this.db = dbId ? admin.firestore(dbId) : admin.firestore();
+      this.db = dbId ? getFirestore(app, dbId) : getFirestore(app);
       this.isFirebase = true;
       console.log('🔥 Connected successfully to Firebase Firestore.', dbId ? `Database instance: ${dbId}` : 'Database instance: (default)');
       

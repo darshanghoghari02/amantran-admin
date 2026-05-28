@@ -94,6 +94,22 @@ app.get('/', (req, res) => {
   });
 });
 
+// Connection Diagnose Info
+app.get('/api/diagnose', (req, res) => {
+  res.json({
+    isFirebaseConnected: dbService.isFirebase,
+    firebaseDatabaseId: process.env.FIREBASE_DATABASE_ID || '(default)',
+    hasServiceAccountKeyEnv: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
+    serviceAccountKeyLength: process.env.FIREBASE_SERVICE_ACCOUNT_JSON ? process.env.FIREBASE_SERVICE_ACCOUNT_JSON.length : 0,
+    connectionError: dbService.connectionError || 'None',
+    environment: {
+      nodeVersion: process.version,
+      platform: process.platform,
+      hasEnvKey: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON
+    }
+  });
+});
+
 import https from 'https';
 
 // Translation proxy endpoint to bypass browser CORS constraints

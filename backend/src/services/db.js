@@ -14,6 +14,7 @@ class DatabaseService {
   constructor() {
     this.isFirebase = false;
     this.db = null;
+    this.connectionError = null;
     this.initPromise = this.init();
   }
 
@@ -46,6 +47,7 @@ class DatabaseService {
       console.warn('⚠️ Firebase Credentials not found or invalid. Falling back to LOCAL JSON DB Mode.');
       console.log(`📁 Local database path: ${LOCAL_DB_PATH}`);
       this.isFirebase = false;
+      this.connectionError = error.message || String(error);
       await this.initLocalDb();
     }
   }

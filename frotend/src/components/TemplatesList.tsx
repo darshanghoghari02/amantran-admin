@@ -1,18 +1,18 @@
 import { API_URL, getImageUrl } from '@/config';
 import React, { useState, useEffect } from 'react';
-import { 
-  PlusCircle, 
-  Copy, 
-  Trash2, 
-  Edit3, 
-  Sparkles, 
-  Eye, 
-  EyeOff, 
-  FolderHeart, 
-  Languages, 
-  Type, 
-  Upload, 
-  Palette 
+import {
+  PlusCircle,
+  Copy,
+  Trash2,
+  Edit3,
+  Sparkles,
+  Eye,
+  EyeOff,
+  FolderHeart,
+  Languages,
+  Type,
+  Upload,
+  Palette
 } from 'lucide-react';
 import { Template, Category, CustomFont, Language } from '../types';
 
@@ -25,7 +25,7 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [fonts, setFonts] = useState<CustomFont[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
-  
+
   const [loading, setLoading] = useState(true);
   const [selectedCatId, setSelectedCatId] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -39,7 +39,7 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
   const [isActive, setIsActive] = useState(true);
   const [selectedFonts, setSelectedFonts] = useState<string[]>([]);
   const [selectedLangs, setSelectedLangs] = useState<string[]>([]);
-  
+
   // File Upload State
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPath, setThumbnailPath] = useState('');
@@ -82,13 +82,13 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
   };
 
   const handleFontSelect = (font: string) => {
-    setSelectedFonts(prev => 
+    setSelectedFonts(prev =>
       prev.includes(font) ? prev.filter(f => f !== font) : [...prev, font]
     );
   };
 
   const handleLangSelect = (lang: string) => {
-    setSelectedLangs(prev => 
+    setSelectedLangs(prev =>
       prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang]
     );
   };
@@ -1615,24 +1615,6 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
               };
           }
         });
-      } else if (catSlug === 'engagement') {
-        initialPages = finalBgs.map((bgUrl, index) => ({
-          id: `page_${Math.random().toString(36).substr(2, 9)}`,
-          name: index === 0 ? 'Cover Page' : index === 1 ? 'Welcome Page' : `Details Page ${index}`,
-          backgroundImage: bgUrl,
-          elements: [] // Empty elements so healTemplate will seed them dynamically!
-        }));
-
-        if (initialPages.length === 0) {
-          for (let i = 0; i < 6; i++) {
-            initialPages.push({
-              id: `page_${Math.random().toString(36).substr(2, 9)}`,
-              name: i === 0 ? 'Cover Page' : i === 1 ? 'Welcome Page' : `Details Page ${i}`,
-              backgroundImage: '',
-              elements: [] // Empty elements so healTemplate will seed them dynamically!
-            });
-          }
-        }
       } else {
         initialPages = finalBgs.map((bgUrl, index) => ({
           id: `page_${Math.random().toString(36).substr(2, 9)}`,
@@ -1764,7 +1746,7 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this template? All designed card pages and elements will be lost.')) return;
-    
+
     try {
       const res = await fetch(`${API_URL}/api/templates/${id}`, {
         method: 'DELETE'
@@ -1825,24 +1807,22 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
         <div className="flex gap-2 items-center flex-wrap">
           <button
             onClick={() => setSelectedCatId('')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${
-              !selectedCatId 
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${!selectedCatId
                 ? 'bg-wedding-charcoal-dark text-wedding-gold-light'
                 : 'bg-wedding-pink-light/35 text-wedding-charcoal-light hover:bg-wedding-pink-light/60'
-            }`}
+              }`}
           >
             All Invitations
           </button>
-          
+
           {categories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setSelectedCatId(cat.id)}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${
-                selectedCatId === cat.id
+              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${selectedCatId === cat.id
                   ? 'bg-wedding-charcoal-dark text-wedding-gold-light'
                   : 'bg-wedding-pink-light/35 text-wedding-charcoal-light hover:bg-wedding-pink-light/60'
-              }`}
+                }`}
             >
               {cat.name}
             </button>
@@ -1871,18 +1851,18 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
             </div>
           ) : (
             templates.map((tpl) => (
-              <div 
+              <div
                 key={tpl.id}
                 className="group bg-white border border-wedding-pink-medium/40 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
               >
                 {/* Visual Thumbnail Frame */}
                 <div className="aspect-[4/5] bg-gray-50 border-b border-wedding-pink-medium/20 relative overflow-hidden flex items-center justify-center">
-                  <img 
-                    src={getImageUrl(tpl.thumbnail)} 
+                  <img
+                    src={getImageUrl(tpl.thumbnail)}
                     alt={tpl.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  
+
                   {/* Premium Lock Banner */}
                   <div className="absolute left-4 top-4 flex gap-2">
                     {tpl.isPremium ? (
@@ -1965,11 +1945,10 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                     </button>
                     <button
                       onClick={() => handleToggleState(tpl.id, tpl.isActive)}
-                      className={`py-2 rounded-xl text-[10px] font-bold border transition-colors flex items-center justify-center gap-1 ${
-                        tpl.isActive
+                      className={`py-2 rounded-xl text-[10px] font-bold border transition-colors flex items-center justify-center gap-1 ${tpl.isActive
                           ? 'border-amber-200 text-amber-700 bg-amber-50/50 hover:bg-amber-100/50'
                           : 'border-green-200 text-green-700 bg-green-50/50 hover:bg-green-100/50'
-                      }`}
+                        }`}
                       title={tpl.isActive ? 'Hide Template' : 'Publish Template'}
                     >
                       {tpl.isActive ? 'Draft' : 'Publish'}
@@ -2005,32 +1984,32 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                 <Palette className="w-5 h-5 text-wedding-pink-medium" />
                 {editingTemplate ? 'Edit Template Details' : 'Initialize Wedding Template'}
               </h4>
-              <button 
+              <button
                 onClick={() => setIsModalOpen(false)}
                 className="text-gray-400 hover:text-white font-bold text-sm bg-wedding-charcoal-light px-3 py-1.5 rounded-xl transition-colors"
               >
                 ✕
               </button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               {/* Row 1: Name and Slug */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Template Name</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={name}
                     onChange={(e) => handleNameChange(e.target.value)}
                     placeholder="e.g. Royal Gold Wedding"
                     className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
                   />
                 </div>
-                
+
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Asset Slug (automatic)</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={slug}
                     onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))}
                     placeholder="e.g. royal_gold_wedding"
@@ -2057,8 +2036,8 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                 <div className="space-y-1.5 flex flex-col justify-center pl-2">
                   <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider mb-2">Access Type</label>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={isPremium}
                       onChange={(e) => setIsPremium(e.target.checked)}
                       className="sr-only peer"
@@ -2073,8 +2052,8 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                 <div className="space-y-1.5 flex flex-col justify-center pl-2">
                   <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider mb-2">Display State</label>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={isActive}
                       onChange={(e) => setIsActive(e.target.checked)}
                       className="sr-only peer"
@@ -2098,11 +2077,10 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                         type="button"
                         key={f.id}
                         onClick={() => handleFontSelect(f.family)}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-                          isChecked
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${isChecked
                             ? 'bg-wedding-pink-light border-wedding-pink-dark text-wedding-pink-dark'
                             : 'border-wedding-pink-medium/35 text-wedding-charcoal-light hover:bg-wedding-pink-light/10'
-                        }`}
+                          }`}
                       >
                         {f.family}
                       </button>
@@ -2122,11 +2100,10 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                         type="button"
                         key={l.id}
                         onClick={() => handleLangSelect(l.name)}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-                          isChecked
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${isChecked
                             ? 'bg-wedding-pink-light border-wedding-pink-dark text-wedding-pink-dark'
                             : 'border-wedding-pink-medium/35 text-wedding-charcoal-light hover:bg-wedding-pink-light/10'
-                        }`}
+                          }`}
                       >
                         {l.name}
                       </button>
@@ -2144,11 +2121,11 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                     <span className="text-[11px] font-bold text-wedding-charcoal-dark">
                       {thumbnailFile ? thumbnailFile.name : 'Choose Thumbnail File'}
                     </span>
-                    <input 
-                      type="file" 
+                    <input
+                      type="file"
                       accept="image/*"
                       onChange={(e) => setThumbnailFile(e.target.files ? e.target.files[0] : null)}
-                      className="hidden" 
+                      className="hidden"
                     />
                   </label>
                 </div>
@@ -2161,12 +2138,12 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                       <span className="text-[11px] font-bold text-wedding-charcoal-dark">
                         {bgFiles ? `${bgFiles.length} files selected` : 'Select Page Backgrounds'}
                       </span>
-                      <input 
-                        type="file" 
+                      <input
+                        type="file"
                         accept="image/*"
                         multiple
                         onChange={(e) => setBgFiles(e.target.files)}
-                        className="hidden" 
+                        className="hidden"
                       />
                     </label>
                   </div>

@@ -89,8 +89,20 @@ function healTemplate(template: Template | null): Template | null {
   const isEngagement = cloned.categoryId === 'cat_engagement' || cloned.slug === 'engagement' || cloned.categoryId === 'engagement';
 
   cloned.pages = cloned.pages.map((page, idx) => {
-    // 1. If it's an engagement template and elements is empty, seed them!
-    if (isEngagement && (!page.elements || page.elements.length === 0)) {
+    const isPlaceholder = !page.elements || page.elements.length === 0 || (
+      page.elements.length === 1 && (
+        !page.elements[0].id || 
+        page.elements[0].id.startsWith('elem_welcome_') || 
+        page.elements[0].id.startsWith('elem_blank_') || 
+        page.elements[0].id.startsWith('elem_generic_') || 
+        page.elements[0].text === 'WEDDING INVITATION' || 
+        page.elements[0].text === 'Join Us on the Ceremony' || 
+        page.elements[0].text === 'Double click to edit text'
+      )
+    );
+
+    // 1. If it's an engagement template and elements is empty or a placeholder, seed them!
+    if (isEngagement && isPlaceholder) {
       switch (idx) {
         case 0:
           page.elements = [
@@ -1336,7 +1348,7 @@ function healTemplate(template: Template | null): Template | null {
             }
           ];
       }
-    } else if (isWedding && (!page.elements || page.elements.length === 0)) {
+    } else if (isWedding && isPlaceholder) {
       switch (idx) {
         case 0:
           page.elements = [

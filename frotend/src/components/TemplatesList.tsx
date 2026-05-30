@@ -1615,6 +1615,24 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
               };
           }
         });
+      } else if (catSlug === 'engagement') {
+        initialPages = finalBgs.map((bgUrl, index) => ({
+          id: `page_${Math.random().toString(36).substr(2, 9)}`,
+          name: index === 0 ? 'Cover Page' : index === 1 ? 'Welcome Page' : `Details Page ${index}`,
+          backgroundImage: bgUrl,
+          elements: [] // Empty elements so healTemplate will seed them dynamically!
+        }));
+
+        if (initialPages.length === 0) {
+          for (let i = 0; i < 6; i++) {
+            initialPages.push({
+              id: `page_${Math.random().toString(36).substr(2, 9)}`,
+              name: i === 0 ? 'Cover Page' : i === 1 ? 'Welcome Page' : `Details Page ${i}`,
+              backgroundImage: '',
+              elements: [] // Empty elements so healTemplate will seed them dynamically!
+            });
+          }
+        }
       } else {
         initialPages = finalBgs.map((bgUrl, index) => ({
           id: `page_${Math.random().toString(36).substr(2, 9)}`,

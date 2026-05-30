@@ -133,6 +133,25 @@ export default function RightPanel() {
 
   const isLocked = element.isLocked;
 
+  const getStyleVal = (key: string, fallback: any) => {
+    return (element.languageStyles?.[selectedLanguage] as any)?.[key] ?? (element as any)[key] ?? fallback;
+  };
+
+  const setStyleVal = (key: string, val: any) => {
+    const updatedStyles = {
+      ...(element.languageStyles || {}),
+      [selectedLanguage]: {
+        ...(element.languageStyles?.[selectedLanguage] || {}),
+        [key]: val
+      }
+    };
+    const baseUpdates: any = { languageStyles: updatedStyles };
+    if (selectedLanguage === 'English') {
+      baseUpdates[key] = val;
+    }
+    updateElement(element.id, baseUpdates);
+  };
+
   const handleCoordinateChange = (field: 'x' | 'y' | 'width' | 'height' | 'rotation', val: string) => {
     const num = parseInt(val) || 0;
     updateElement(element.id, { [field]: num });
@@ -220,8 +239,8 @@ export default function RightPanel() {
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-wedding-charcoal-light uppercase tracking-wider block">Font Family</label>
               <select
-                value={element.fontFamily || 'Rasa'}
-                onChange={(e) => updateElement(element.id, { fontFamily: e.target.value })}
+                value={getStyleVal('fontFamily', 'Rasa')}
+                onChange={(e) => setStyleVal('fontFamily', e.target.value)}
                 disabled={isLocked}
                 className="w-full px-2 py-2.5 text-xs rounded-xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark focus:outline-none"
               >
@@ -236,8 +255,8 @@ export default function RightPanel() {
               <label className="text-[10px] font-bold text-wedding-charcoal-light uppercase tracking-wider block">Size (px)</label>
               <input
                 type="number"
-                value={element.fontSize || 36}
-                onChange={(e) => updateElement(element.id, { fontSize: parseInt(e.target.value) || 12 })}
+                value={getStyleVal('fontSize', 36)}
+                onChange={(e) => setStyleVal('fontSize', parseInt(e.target.value) || 12)}
                 disabled={isLocked}
                 className="w-full px-3 py-2 text-xs rounded-xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark focus:outline-none"
               />
@@ -249,8 +268,8 @@ export default function RightPanel() {
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-wedding-charcoal-light uppercase tracking-wider block">Font Weight</label>
               <select
-                value={element.fontWeight || 'normal'}
-                onChange={(e) => updateElement(element.id, { fontWeight: e.target.value })}
+                value={getStyleVal('fontWeight', 'normal')}
+                onChange={(e) => setStyleVal('fontWeight', e.target.value)}
                 disabled={isLocked}
                 className="w-full px-2 py-2.5 text-xs rounded-xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark focus:outline-none"
               >
@@ -268,8 +287,8 @@ export default function RightPanel() {
               <input
                 type="number"
                 step="0.5"
-                value={element.letterSpacing || 0}
-                onChange={(e) => updateElement(element.id, { letterSpacing: parseFloat(e.target.value) || 0 })}
+                value={getStyleVal('letterSpacing', 0)}
+                onChange={(e) => setStyleVal('letterSpacing', parseFloat(e.target.value) || 0)}
                 disabled={isLocked}
                 className="w-full px-3 py-2 text-xs rounded-xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark focus:outline-none"
               />
@@ -280,8 +299,8 @@ export default function RightPanel() {
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-wedding-charcoal-light uppercase tracking-wider block">Premium Shadow Presets</label>
             <select
-              value={element.textShadow || ''}
-              onChange={(e) => updateElement(element.id, { textShadow: e.target.value })}
+              value={getStyleVal('textShadow', '')}
+              onChange={(e) => setStyleVal('textShadow', e.target.value)}
               disabled={isLocked}
               className="w-full px-2 py-2.5 text-xs rounded-xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark focus:outline-none font-medium"
             >
@@ -299,15 +318,15 @@ export default function RightPanel() {
             <div className="flex gap-2">
               <input
                 type="color"
-                value={element.color || '#4A2E35'}
-                onChange={(e) => updateElement(element.id, { color: e.target.value })}
+                value={getStyleVal('color', '#4A2E35')}
+                onChange={(e) => setStyleVal('color', e.target.value)}
                 disabled={isLocked}
                 className="w-8 h-8 rounded-lg border border-wedding-pink-medium/40 cursor-pointer overflow-hidden p-0"
               />
               <input
                 type="text"
-                value={element.color || '#4A2E35'}
-                onChange={(e) => updateElement(element.id, { color: e.target.value })}
+                value={getStyleVal('color', '#4A2E35')}
+                onChange={(e) => setStyleVal('color', e.target.value)}
                 disabled={isLocked}
                 placeholder="#4A2E35"
                 className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-wedding-pink-medium/40 text-wedding-charcoal-dark focus:outline-none uppercase font-mono"
@@ -319,15 +338,15 @@ export default function RightPanel() {
           <div className="space-y-1.5">
             <div className="flex justify-between items-center text-[10px] font-bold text-wedding-charcoal-light uppercase tracking-wider">
               <span>Line Height</span>
-              <span>{element.lineHeight || 1.2}</span>
+              <span>{getStyleVal('lineHeight', 1.2)}</span>
             </div>
             <input
               type="range"
               min="0.8"
               max="2.5"
               step="0.1"
-              value={element.lineHeight || 1.2}
-              onChange={(e) => updateElement(element.id, { lineHeight: parseFloat(e.target.value) })}
+              value={getStyleVal('lineHeight', 1.2)}
+              onChange={(e) => setStyleVal('lineHeight', parseFloat(e.target.value))}
               disabled={isLocked}
               className="w-full accent-wedding-pink-dark h-1 bg-wedding-pink-light rounded-lg cursor-pointer"
             />
@@ -344,12 +363,12 @@ export default function RightPanel() {
                 { id: 'justify', icon: AlignJustify }
               ].map((align) => {
                 const Icon = align.icon;
-                const isSelected = (element.alignment || 'center') === align.id;
+                const isSelected = getStyleVal('alignment', 'center') === align.id;
                 return (
                   <button
                     key={align.id}
                     type="button"
-                    onClick={() => updateElement(element.id, { alignment: align.id as any })}
+                    onClick={() => setStyleVal('alignment', align.id as any)}
                     disabled={isLocked}
                     className={`py-2 flex items-center justify-center transition-colors ${
                       isSelected

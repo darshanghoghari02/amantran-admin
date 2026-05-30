@@ -250,14 +250,16 @@ export default function PreviewModal({
                               {elem.type === 'text' ? (
                                 <div
                                   style={{
-                                    fontFamily: elem.fontFamily || 'Rasa',
-                                    fontSize: `${(elem.fontSize || 36) * mobileScale}px`,
-                                    color: elem.color || '#4A2E35',
-                                    lineHeight: elem.lineHeight || 1.2,
-                                    textAlign: elem.alignment || 'center',
-                                    fontWeight: elem.fontWeight || 'normal',
-                                    letterSpacing: elem.letterSpacing ? `${elem.letterSpacing * mobileScale}px` : undefined,
-                                    textShadow: elem.textShadow || undefined,
+                                    fontFamily: elem.languageStyles?.[selectedLanguage]?.fontFamily || elem.fontFamily || 'Rasa',
+                                    fontSize: `${(elem.languageStyles?.[selectedLanguage]?.fontSize || elem.fontSize || 36) * mobileScale}px`,
+                                    color: elem.languageStyles?.[selectedLanguage]?.color || elem.color || '#4A2E35',
+                                    lineHeight: elem.languageStyles?.[selectedLanguage]?.lineHeight || elem.lineHeight || 1.2,
+                                    textAlign: elem.languageStyles?.[selectedLanguage]?.alignment || elem.alignment || 'center',
+                                    fontWeight: elem.languageStyles?.[selectedLanguage]?.fontWeight || elem.fontWeight || 'normal',
+                                    letterSpacing: elem.languageStyles?.[selectedLanguage]?.letterSpacing !== undefined
+                                      ? `${elem.languageStyles[selectedLanguage].letterSpacing * mobileScale}px`
+                                      : (elem.letterSpacing ? `${elem.letterSpacing * mobileScale}px` : undefined),
+                                    textShadow: elem.languageStyles?.[selectedLanguage]?.textShadow || elem.textShadow || undefined,
                                   }}
                                   className="w-full h-full break-words whitespace-pre-wrap flex items-center justify-center font-medium leading-none select-none"
                                 >
@@ -384,14 +386,16 @@ export default function PreviewModal({
                           {elem.type === 'text' ? (
                             <div
                               style={{
-                                fontFamily: elem.fontFamily || 'Rasa',
-                                fontSize: `${(elem.fontSize || 36) * desktopScale}px`,
-                                color: elem.color || '#4A2E35',
-                                lineHeight: elem.lineHeight || 1.2,
-                                textAlign: elem.alignment || 'center',
-                                fontWeight: elem.fontWeight || 'normal',
-                                letterSpacing: elem.letterSpacing ? `${elem.letterSpacing * desktopScale}px` : undefined,
-                                textShadow: elem.textShadow || undefined,
+                                fontFamily: elem.languageStyles?.[selectedLanguage]?.fontFamily || elem.fontFamily || 'Rasa',
+                                fontSize: `${(elem.languageStyles?.[selectedLanguage]?.fontSize || elem.fontSize || 36) * desktopScale}px`,
+                                color: elem.languageStyles?.[selectedLanguage]?.color || elem.color || '#4A2E35',
+                                lineHeight: elem.languageStyles?.[selectedLanguage]?.lineHeight || elem.lineHeight || 1.2,
+                                textAlign: elem.languageStyles?.[selectedLanguage]?.alignment || elem.alignment || 'center',
+                                fontWeight: elem.languageStyles?.[selectedLanguage]?.fontWeight || elem.fontWeight || 'normal',
+                                letterSpacing: elem.languageStyles?.[selectedLanguage]?.letterSpacing !== undefined
+                                  ? `${elem.languageStyles[selectedLanguage].letterSpacing * desktopScale}px`
+                                  : (elem.letterSpacing ? `${elem.letterSpacing * desktopScale}px` : undefined),
+                                textShadow: elem.languageStyles?.[selectedLanguage]?.textShadow || elem.textShadow || undefined,
                               }}
                               className="w-full h-full break-words whitespace-pre-wrap flex items-center justify-center font-medium leading-none select-none"
                             >

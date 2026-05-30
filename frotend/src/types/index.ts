@@ -33,6 +33,16 @@ export interface CanvasElement {
   letterSpacing?: number;
   textShadow?: string;
   translations?: Record<string, string>;
+  languageStyles?: Record<string, {
+    fontFamily?: string;
+    fontSize?: number;
+    fontWeight?: string;
+    color?: string;
+    lineHeight?: number;
+    alignment?: 'left' | 'center' | 'right' | 'justify';
+    letterSpacing?: number;
+    textShadow?: string;
+  }>;
   
   // Image / Sticker specific
   imagePath?: string;    // Static asset path (e.g. /assets/images/wedding/royal_wedding/ganesh.png)

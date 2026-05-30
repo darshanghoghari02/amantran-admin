@@ -86,10 +86,1257 @@ function healTemplate(template: Template | null): Template | null {
 
   const cloned = JSON.parse(JSON.stringify(template)) as Template;
   const isWedding = cloned.categoryId === 'cat_wedding' || cloned.slug === 'wedding';
+  const isEngagement = cloned.categoryId === 'cat_engagement' || cloned.slug === 'engagement' || cloned.categoryId === 'engagement';
 
   cloned.pages = cloned.pages.map((page, idx) => {
-    // 1. If it's a wedding template and elements is empty, seed them!
-    if (isWedding && (!page.elements || page.elements.length === 0)) {
+    // 1. If it's an engagement template and elements is empty, seed them!
+    if (isEngagement && (!page.elements || page.elements.length === 0)) {
+      switch (idx) {
+        case 0:
+          page.elements = [
+            {
+              id: `elem_ganesh_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'sticker',
+              x: 440,
+              y: 180,
+              width: 200,
+              height: 200,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 1,
+              isLocked: false,
+              imagePath: '/assets/images/stickers/ganesh.png'
+            },
+            {
+              id: `elem_cover_mantra_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 400,
+              width: 880,
+              height: 60,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 2,
+              isLocked: false,
+              text: '|| શ્રી ગણેશાય નમઃ ||',
+              fontFamily: 'Hind Vadodara',
+              fontSize: 22,
+              color: '#AA820A',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: '600',
+              letterSpacing: 2,
+              translations: {
+                English: '|| OM SHREE GANESHAYA NAMAH ||',
+                Gujarati: '|| શ્રી ગણેશાય નમઃ ||',
+                Hindi: '|| શ્રી ગણેશાય નમઃ ||',
+                Marathi: '|| શ્રી ગણેશાય નમઃ ||',
+                Tamil: '|| શ્રી ગણેશાય નમઃ ||',
+                Urdu: '|| શ્રી ગણેશાય નમઃ ||'
+              }
+            },
+            {
+              id: `elem_cover_title_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 480,
+              width: 880,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 3,
+              isLocked: false,
+              text: 'ચાંદલા વિધિ',
+              fontFamily: 'KAP011',
+              fontSize: 56,
+              color: '#8A1E2B',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: '700',
+              letterSpacing: 2,
+              translations: {
+                English: 'CHANDLA VIDHI',
+                Gujarati: 'ચાંદલા વિધિ',
+                Hindi: 'चांदला विधि',
+                Marathi: 'चांदला विधी',
+                Tamil: 'சாந்தலா விதி',
+                Urdu: 'چاندلا ودھی'
+              }
+            },
+            {
+              id: `elem_cover_bride_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 80,
+              y: 600,
+              width: 400,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 4,
+              isLocked: false,
+              text: 'ચિ. અંકિતા',
+              fontFamily: 'KAP011',
+              fontSize: 44,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'right',
+              fontWeight: '700',
+              letterSpacing: 0,
+              translations: {
+                English: 'Ankita',
+                Gujarati: 'ચિ. અંકિતા',
+                Hindi: 'चि. अंकिता',
+                Marathi: 'चि. अंकिता',
+                Tamil: 'அங்கிதா',
+                Urdu: 'انکیتا'
+              }
+            },
+            {
+              id: `elem_cover_weds_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 480,
+              y: 600,
+              width: 120,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 4,
+              isLocked: false,
+              text: '💍',
+              fontFamily: 'KAP011',
+              fontSize: 36,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: '700',
+              letterSpacing: 0,
+              translations: {
+                English: '💍',
+                Gujarati: '💍',
+                Hindi: '💍',
+                Marathi: '💍',
+                Tamil: '💍',
+                Urdu: '💍'
+              }
+            },
+            {
+              id: `elem_cover_groom_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 600,
+              y: 600,
+              width: 400,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 4,
+              isLocked: false,
+              text: 'ચિ. અભિષેક',
+              fontFamily: 'KAP011',
+              fontSize: 44,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'left',
+              fontWeight: '700',
+              letterSpacing: 0,
+              translations: {
+                English: 'Abhishek',
+                Gujarati: 'ચિ. અભિષેક',
+                Hindi: 'चि. अभिषेक',
+                Marathi: 'चि. अभिषेक',
+                Tamil: 'அபிஷேக்',
+                Urdu: 'অভিষেক'
+              }
+            },
+            {
+              id: `elem_cover_date_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 740,
+              width: 880,
+              height: 80,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 5,
+              isLocked: false,
+              text: 'તા. ૧૯/૧૨/૨૦૨૫, રવિવાર',
+              fontFamily: 'Hind Vadodara',
+              fontSize: 24,
+              color: '#3D3B3C',
+              lineHeight: 1.3,
+              alignment: 'center',
+              fontWeight: '500',
+              letterSpacing: 1,
+              translations: {
+                English: 'Sunday, December 19, 2025',
+                Gujarati: 'તા. ૧૯/૧૨/૨૦૨૫, રવિવાર',
+                Hindi: 'दिनांक: ૧૯/૧૨/૨૦૨૫, रविवार',
+                Marathi: 'दिनांक: ૧૯/૧૨/૨૦૨૫, रविवार',
+                Tamil: 'டிசம்பர் 19, 2025, ஞாயிற்றுக்கிழமை',
+                Urdu: 'اتوار، 19 دسمبر 2025'
+              }
+            },
+            {
+              id: `elem_cover_guest_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 840,
+              width: 880,
+              height: 80,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 6,
+              isLocked: false,
+              text: 'સ્નેહી શ્રી, ............................................................',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#8A1E2B',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: '500',
+              letterSpacing: 0,
+              translations: {
+                English: 'To, ............................................................',
+                Gujarati: 'સ્નેહી શ્રી, ............................................................'
+              }
+            },
+            {
+              id: `elem_cover_inviter_title_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 940,
+              width: 880,
+              height: 60,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 7,
+              isLocked: false,
+              text: 'નિમંત્રક',
+              fontFamily: 'Rasa',
+              fontSize: 26,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: 'bold',
+              letterSpacing: 0,
+              translations: {
+                English: 'Inviter',
+                Gujarati: 'નિમંત્રક'
+              }
+            },
+            {
+              id: `elem_cover_inviter_details_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 1010,
+              width: 880,
+              height: 200,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 8,
+              isLocked: false,
+              text: 'ભરતભાઈ ગોપાલભાઈ દેસાઈ\nગોપાલભાઈ રાધેશ્યામભાઈ દેસાઈ\nસિલ્વર રેસિડન્સ સોસાયટી સામે,\nનાનાપુરા ગામ, સુરત.',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#8A1E2B',
+              lineHeight: 1.5,
+              alignment: 'center',
+              fontWeight: '500',
+              letterSpacing: 0,
+              translations: {
+                English: 'Bharatbhai Gopalbhai Desai\nGopalbhai Radheshyambhai Desai\nOpp. Silver Residence Society,\nNanapura Village, Surat.',
+                Gujarati: 'ભરતભાઈ ગોપાલભાઈ દેસાઈ\nગોપાલભાઈ રાધેશ્યામભાઈ દેસાઈ\nસિલ્વર રેસિડન્સ સોસાયટી સામે,\nનાનાપુરા ગામ, સુરત.'
+              }
+            }
+          ];
+          break;
+        case 1:
+          page.elements = [
+            {
+              id: `elem_welcome_mantra_left_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 80,
+              y: 80,
+              width: 440,
+              height: 60,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 1,
+              isLocked: false,
+              text: '|| શ્રી ગણેશાય નમઃ ||',
+              fontFamily: 'Hind Vadodara',
+              fontSize: 18,
+              color: '#AA820A',
+              lineHeight: 1.2,
+              alignment: 'left',
+              fontWeight: '600',
+              translations: {
+                English: '|| OM SHREE GANESHAYA NAMAH ||',
+                Gujarati: '|| શ્રી ગણેશાય નમઃ ||'
+              }
+            },
+            {
+              id: `elem_welcome_mantra_right_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 560,
+              y: 80,
+              width: 440,
+              height: 60,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 2,
+              isLocked: false,
+              text: '|| ૐ નમઃ શિવાય ||',
+              fontFamily: 'Hind Vadodara',
+              fontSize: 18,
+              color: '#AA820A',
+              lineHeight: 1.2,
+              alignment: 'right',
+              fontWeight: '600',
+              translations: {
+                English: '|| OM NAMAH SHIVAYA ||',
+                Gujarati: '|| ૐ નમઃ શિવાય ||'
+              }
+            },
+            {
+              id: `elem_welcome_title_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 180,
+              width: 880,
+              height: 120,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 3,
+              isLocked: false,
+              text: 'સગાઈ મહોત્સવ',
+              fontFamily: 'KAP011',
+              fontSize: 58,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: '700',
+              letterSpacing: 1,
+              translations: {
+                English: 'Engagement Celebration',
+                Gujarati: 'સગાઈ મહોત્સવ'
+              }
+            },
+            {
+              id: `elem_welcome_inviter_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 340,
+              width: 880,
+              height: 290,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 4,
+              isLocked: false,
+              text: 'સહર્ષ ખુશાલી સાથે જણાવવાનું કે અમારા કુટુંબની શુભ આશીર્વાદ મળવાથી અમારા પ્રિય સંતાનોના શુભ (સાદી) પ્રસંગે પાવનિની તથા શ્રી સત્યનારાયણ ભગવાનના દર્શન ની શુભના.',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#8A1E2B',
+              lineHeight: 1.6,
+              alignment: 'center',
+              fontWeight: '400',
+              letterSpacing: 0,
+              translations: {
+                English: 'We are extremely pleased to announce that with the auspicious blessings of our family, the engagement of our beloved children is scheduled.',
+                Gujarati: 'સહર્ષ ખુશાલી સાથે જણાવવાનું કે અમારા કુટુંબની શુભ આશીર્વાદ મળવાથી અમારા પ્રિય સંતાનોના શુભ (સાદી) પ્રસંગે પાવનિની તથા શ્રી સત્યનારાયણ ભગવાનના દર્શન ની શુભના.'
+              }
+            },
+            {
+              id: `elem_welcome_bride_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 80,
+              y: 650,
+              width: 400,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 5,
+              isLocked: false,
+              text: 'ચિ. અંકિતા',
+              fontFamily: 'KAP011',
+              fontSize: 44,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'right',
+              fontWeight: '700',
+              translations: {
+                English: 'Ankita',
+                Gujarati: 'ચિ. અંકિતા'
+              }
+            },
+            {
+              id: `elem_welcome_weds_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 480,
+              y: 650,
+              width: 120,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 5,
+              isLocked: false,
+              text: '💍',
+              fontFamily: 'KAP011',
+              fontSize: 36,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: '700',
+              translations: {
+                English: '💍',
+                Gujarati: '💍'
+              }
+            },
+            {
+              id: `elem_welcome_groom_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 600,
+              y: 650,
+              width: 400,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 5,
+              isLocked: false,
+              text: 'ચિ. અભિષેક',
+              fontFamily: 'KAP011',
+              fontSize: 44,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'left',
+              fontWeight: '700',
+              translations: {
+                English: 'Abhishek',
+                Gujarati: 'ચિ. અભિષેક'
+              }
+            },
+            {
+              id: `elem_welcome_groom_details_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 780,
+              width: 880,
+              height: 380,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 6,
+              isLocked: false,
+              text: 'શિવનગર બજાર હોલ સામે, જલારામ ચૌક ની આજુબાજુ યોજાનાર સગાઈ ના શુભ અવસરે તારીખ ૨૦૨૫ ના પોષ વદ ૧ ના રવિવાર, ૧૯-ડિસેમ્બર-૨૦૨૫ ના રોજ વિધિ સાંજે ૫:૦૦ કલાકે રાખવામાં આવેલ છે. આ શુભ પ્રસંગે પધારી સ્નેહભોજન માણી અમોને કૃતાર્થ કરશો.',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#8A1E2B',
+              lineHeight: 1.6,
+              alignment: 'center',
+              fontWeight: '500',
+              translations: {
+                English: 'The auspicious Engagement Ceremony is scheduled on Sunday, 19-December-2025 at 5:00 PM at Shivnagar Bazar Hall, near Jalaram Chowk. Please join us for dinner and bless the couple.',
+                Gujarati: 'શિવનગર બજાર હોલ સામે, જલારામ ચૌક ની આજુબાજુ યોજાનાર સગાઈ ના શુભ અવસરે તારીખ ૨૦૨૫ ના પોષ વદ ૧ ના રવિવાર, ૧૯-ડિસેમ્બર-૨૦૨૫ ના રોજ વિધિ સાંજે ૫:૦૦ કલાકે રાખવામાં આવેલ છે. આ શુભ પ્રસંગે પધારી સ્નેહભોજન માણી અમોને કૃતાર્થ કરશો.'
+              }
+            }
+          ];
+          break;
+        case 2:
+          page.elements = [
+            {
+              id: `elem_mangal_title_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 200,
+              width: 880,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 1,
+              isLocked: false,
+              text: 'માંગલિક પ્રસંગો',
+              fontFamily: 'KAP011',
+              fontSize: 46,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: '700',
+              translations: {
+                English: 'Auspicious Ceremonies',
+                Gujarati: 'માંગલિક પ્રસંગો'
+              }
+            },
+            {
+              id: `elem_mangal_event1_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 80,
+              y: 360,
+              width: 440,
+              height: 250,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 2,
+              isLocked: false,
+              text: 'ગણેશ સ્થાપના\nતા. ૧૯/12/૨૦૨૫ ને શુક્રવાર\nસવારે ૯:૩0 કલાકે',
+              fontFamily: 'Rasa',
+              fontSize: 24,
+              color: '#3E603B',
+              lineHeight: 1.4,
+              alignment: 'center',
+              fontWeight: '500',
+              translations: {
+                English: 'Ganesh Sthapana\nFriday, 19-Dec-2025\nTime: 9:30 AM',
+                Gujarati: 'ગણેશ સ્થાપના\nતા. ૧૯/12/૨૦૨૫ ને શુક્રવાર\nસવારે ૯:૩0 કલાકે'
+              }
+            },
+            {
+              id: `elem_mangal_event2_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 560,
+              y: 360,
+              width: 440,
+              height: 250,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 3,
+              isLocked: false,
+              text: 'ચાંદલા વિધિ\nતા. ૧૯/12/૨૦૨૫ ને રવિવાર\nસાંજે ૫:૦0 કલાકે',
+              fontFamily: 'Rasa',
+              fontSize: 24,
+              color: '#3E603B',
+              lineHeight: 1.4,
+              alignment: 'center',
+              fontWeight: '500',
+              translations: {
+                English: 'Chandla Vidhi\nSunday, 19-Dec-2025\nTime: 5:00 PM',
+                Gujarati: 'ચાંદલા વિધિ\nતા. ૧૯/12/૨૦૨૫ ને રવિવાર\nસાંજે ૫:૦0 કલાકે'
+              }
+            },
+            {
+              id: `elem_mangal_event3_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 650,
+              width: 880,
+              height: 250,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 4,
+              isLocked: false,
+              text: 'ભોજન સમારંભ\nતા. ૧૯/12/૨૦૨૫ ને રવિવાર\nસાંજે ૭:૩0 કલાકે\nઆ શુભ પ્રસંગે પધારી સ્નેહભોજન માણી અમોને કૃતાર્થ કરશો.',
+              fontFamily: 'Rasa',
+              fontSize: 24,
+              color: '#8A1E2B',
+              lineHeight: 1.5,
+              alignment: 'center',
+              fontWeight: '500',
+              translations: {
+                English: 'Dinner Feast\nSunday, 19-Dec-2025\nTime: 7:30 PM\nPlease join us for dinner and share the joy.',
+                Gujarati: 'ભોજન સમારંભ\nતા. ૧૯/12/૨૦૨૫ ને રવિવાર\nસાંજે ૭:૩0 કલાકે\nઆ શુભ પ્રસંગે પધારી સ્નેહભોજન માણી અમોને કૃતાર્થ કરશો.'
+              }
+            },
+            {
+              id: `elem_mangal_venue_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 930,
+              width: 880,
+              height: 200,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 5,
+              isLocked: false,
+              text: 'શુભ સ્થળ\nપ્લોટ નં.૧, બાપા સીતારામ ચોક, સુરત.',
+              fontFamily: 'Rasa',
+              fontSize: 24,
+              color: '#8A1E2B',
+              lineHeight: 1.5,
+              alignment: 'center',
+              fontWeight: '500',
+              translations: {
+                English: 'Venue\nPlot No. 1, Bapa Sitaram Chowk, Surat.',
+                Gujarati: 'શુભ સ્થળ\nપ્લોટ નં.૧, બાપા સીતારામ ચોક, સુરત.'
+              }
+            }
+          ];
+          break;
+        case 3:
+          page.elements = [
+            {
+              id: `elem_sangeet_title_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 200,
+              width: 880,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 1,
+              isLocked: false,
+              text: 'સ્નેહ મિલન',
+              fontFamily: 'KAP011',
+              fontSize: 46,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: '700',
+              translations: {
+                English: 'Sneha Milan',
+                Gujarati: 'સ્નેહ મિલન'
+              }
+            },
+            {
+              id: `elem_sangeet_poem_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 320,
+              width: 880,
+              height: 300,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 2,
+              isLocked: false,
+              text: 'અમારા વ્હાલ સોયા સંતાનોના શુભ સગાઈના અવસરે આપને સ્નેહભર્યું નિમંત્રણ છે. આપની ઉપસ્થિતિ અમારા આનંદને દ્વિગુણિત કરશે.',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#8A1E2B',
+              lineHeight: 1.5,
+              alignment: 'center',
+              fontWeight: '400',
+              translations: {
+                English: 'We cordially invite you to join us in celebrating the sweet bond of engagement of our children. Your presence will multiply our joy.',
+                Gujarati: 'અમારા વ્હાલ સોયા સંતાનોના શુભ સગાઈના અવસરે આપને સ્નેહભર્યું નિમંત્રણ છે. આપની ઉપસ્થિતિ અમારા આનંદને દ્વિગુણિત કરશે.'
+              }
+            },
+            {
+              id: `elem_sangeet_bride_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 80,
+              y: 640,
+              width: 400,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 3,
+              isLocked: false,
+              text: 'ચિ. અંકિતા',
+              fontFamily: 'KAP011',
+              fontSize: 44,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'right',
+              fontWeight: '700',
+              translations: {
+                English: 'Ankita',
+                Gujarati: 'ચિ. અંકિતા'
+              }
+            },
+            {
+              id: `elem_sangeet_weds_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 480,
+              y: 640,
+              width: 120,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 3,
+              isLocked: false,
+              text: '💍',
+              fontFamily: 'KAP011',
+              fontSize: 36,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: '700',
+              translations: {
+                English: '💍',
+                Gujarati: '💍'
+              }
+            },
+            {
+              id: `elem_sangeet_groom_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 600,
+              y: 640,
+              width: 400,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 3,
+              isLocked: false,
+              text: 'ચિ. અભિષેક',
+              fontFamily: 'KAP011',
+              fontSize: 44,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'left',
+              fontWeight: '700',
+              translations: {
+                English: 'Abhishek',
+                Gujarati: 'ચિ. અભિષેક'
+              }
+            },
+            {
+              id: `elem_sangeet_details_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 760,
+              width: 880,
+              height: 160,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 4,
+              isLocked: false,
+              text: 'શુભ સગાઈ ઉત્સવ પ્રસંગે\nરવિવાર, તા. ૧૯-૧૨-૨૦૨૫ નાં રોજ\nસાંજે ૬:૦0 કલાકે',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#8A1E2B',
+              lineHeight: 1.5,
+              alignment: 'center',
+              fontWeight: '500',
+              translations: {
+                English: 'On the celebration of auspicious engagement\nSunday, December 19, 2025\nTime: 6:00 PM',
+                Gujarati: 'શુભ સગાઈ ઉત્સવ પ્રસંગે\nરવિવાર, તા. ૧૯-૧૨-૨૦૨૫ નાં રોજ\nસાંજે ૬:૦0 કલાકે'
+              }
+            },
+            {
+              id: `elem_sangeet_bhojan_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 910,
+              width: 880,
+              height: 120,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 5,
+              isLocked: false,
+              text: 'ભોજન સમારંભ\nસાંજે ૭:૩0 કલાકે\nઆપશ્રી .......... પધારશોજી',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#8A1E2B',
+              lineHeight: 1.4,
+              alignment: 'center',
+              fontWeight: '500',
+              translations: {
+                English: 'Dinner Feast\nTime: 7:30 PM\nYou are cordially invited',
+                Gujarati: 'ભોજન સમારંભ\nસાંજે ૭:૩0 કલાકે\nઆપશ્રી .......... પધારશોજી'
+              }
+            },
+            {
+              id: `elem_sangeet_venue_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 1030,
+              width: 880,
+              height: 160,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 6,
+              isLocked: false,
+              text: 'શુભ સ્થળ\nપ્લોટ નં.૧, બાપા સીતારામ ચોક, સુરત.',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#8A1E2B',
+              lineHeight: 1.5,
+              alignment: 'center',
+              fontWeight: '500',
+              translations: {
+                English: 'Venue\nPlot No. 1, Bapa Sitaram Chowk, Surat.',
+                Gujarati: 'શુભ સ્થળ\nપ્લોટ નં.૧, બાપા સીતારામ ચોક, સુરત.'
+              }
+            }
+          ];
+          break;
+        case 4:
+          page.elements = [
+            {
+              id: `elem_parinay_title_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 200,
+              width: 880,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 1,
+              isLocked: false,
+              text: 'સગાઈ મહોત્સવ',
+              fontFamily: 'KAP011',
+              fontSize: 46,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: '700',
+              translations: {
+                English: 'Engagement Ceremony',
+                Gujarati: 'સગાઈ મહોત્સવ'
+              }
+            },
+            {
+              id: `elem_parinay_intro_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 310,
+              width: 880,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 2,
+              isLocked: false,
+              text: 'બે મનની સ્નેહભરી ગાંઠ એટલે સગાઈ પ્રસંગ.',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#8A1E2B',
+              lineHeight: 1.5,
+              alignment: 'center',
+              fontWeight: '500',
+              translations: {
+                English: 'Engagement is a union of two hearts tied with love.',
+                Gujarati: 'બે મનની સ્નેહભરી ગાંઠ એટલે સગાઈ પ્રસંગ.'
+              }
+            },
+            {
+              id: `elem_parinay_bride_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 80,
+              y: 430,
+              width: 400,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 3,
+              isLocked: false,
+              text: 'ચિ. અંકિતા',
+              fontFamily: 'KAP011',
+              fontSize: 44,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'right',
+              fontWeight: '700',
+              translations: {
+                English: 'Ankita',
+                Gujarati: 'ચિ. અંકિતા'
+              }
+            },
+            {
+              id: `elem_parinay_weds_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 480,
+              y: 430,
+              width: 120,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 3,
+              isLocked: false,
+              text: '💍',
+              fontFamily: 'KAP011',
+              fontSize: 36,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: '700',
+              translations: {
+                English: '💍',
+                Gujarati: '💍'
+              }
+            },
+            {
+              id: `elem_parinay_groom_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 600,
+              y: 430,
+              width: 400,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 3,
+              isLocked: false,
+              text: 'ચિ. અભિષેક',
+              fontFamily: 'KAP011',
+              fontSize: 44,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'left',
+              fontWeight: '700',
+              translations: {
+                English: 'Abhishek',
+                Gujarati: 'ચિ. અભિષેક'
+              }
+            },
+            {
+              id: `elem_parinay_under_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 540,
+              width: 880,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 4,
+              isLocked: false,
+              text: 'ના શુભ સગાઈ અવસરે આશીર્ભૂત સગાઈ સમારંભ માં\nરવિવાર તા. ૧૯/૧૨/૨૦૨૫ ના રોજ',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#8A1E2B',
+              lineHeight: 1.5,
+              alignment: 'center',
+              fontWeight: '500',
+              translations: {
+                English: 'On their auspicious engagement ceremony\nSunday, December 19, 2025',
+                Gujarati: 'ના શુભ સગાઈ અવસરે આશીર્ભૂત સગાઈ સમારંભ માં\nરવિવાર તા. ૧૯/૧૨/૨૦૨૫ ના રોજ'
+              }
+            },
+            {
+              id: `elem_parinay_left_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 80,
+              y: 670,
+              width: 440,
+              height: 160,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 5,
+              isLocked: false,
+              text: 'ચાંદલા વિધિ\nતા. ૧૯/૧૨/૨૦૨૫ ને રવિવાર\nસાંજે ૫:૦0 કલાકે',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#3E603B',
+              lineHeight: 1.4,
+              alignment: 'center',
+              translations: {
+                English: 'Chandla Vidhi\nSunday, Dec 19, 2025\nTime: 5:00 PM',
+                Gujarati: 'ચાંદલા વિધિ\nતા. ૧૯/૧૨/૨૦૨૫ ને રવિવાર\nસાંજે ૫:૦0 કલાકે'
+              }
+            },
+            {
+              id: `elem_parinay_right_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 560,
+              y: 670,
+              width: 440,
+              height: 160,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 6,
+              isLocked: false,
+              text: 'ભોજન સમારંભ\nતા. ૧૯/૧૨/૨૦૨૫ ને રવિવાર\nસાંજે ૭:૩0 કલાકે',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#3E603B',
+              lineHeight: 1.4,
+              alignment: 'center',
+              translations: {
+                English: 'Dinner Feast\nSunday, Dec 19, 2025\nTime: 7:30 PM',
+                Gujarati: 'ભોજન સમારંભ\nતા. ૧૯/૧૨/૨૦૨૫ ને રવિવાર\nસાંજે ૭:૩0 કલાકે'
+              }
+            },
+            {
+              id: `elem_parinay_bhojan_left_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 80,
+              y: 860,
+              width: 440,
+              height: 180,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 7,
+              isLocked: false,
+              text: 'આપના ............ સહિત પધારવા વિનંતી.',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#8A1E2B',
+              lineHeight: 1.4,
+              alignment: 'center',
+              translations: {
+                English: 'You are cordially requested to join with your family.',
+                Gujarati: 'આપના ............ સહિત પધારવા વિનંતી.'
+              }
+            },
+            {
+              id: `elem_parinay_sthala_right_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 560,
+              y: 860,
+              width: 440,
+              height: 180,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 8,
+              isLocked: false,
+              text: 'શુભ સ્થળ\nપ્લોટ નં.૧, બાપા સીતારામ ચોક, સુરત.',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#8A1E2B',
+              lineHeight: 1.4,
+              alignment: 'center',
+              translations: {
+                English: 'Venue\nPlot No. 1, Bapa Sitaram Chowk, Surat.',
+                Gujarati: 'શુભ સ્થળ\nપ્લોટ નં.૧, બાપા સીતારામ ચોક, સુરત.'
+              }
+            }
+          ];
+          break;
+        case 5:
+          page.elements = [
+            {
+              id: `elem_thanks_mantra_page6_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 60,
+              width: 880,
+              height: 60,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 1,
+              isLocked: false,
+              text: '|| શ્રી ગણેશાય નમઃ ||',
+              fontFamily: 'Hind Vadodara',
+              fontSize: 18,
+              color: '#AA820A',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: '600',
+              translations: {
+                English: '|| OM SHREE GANESHAYA NAMAH ||',
+                Gujarati: '|| શ્રી ગણેશાય નમઃ ||'
+              }
+            },
+            {
+              id: `elem_family_snehadhin_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 130,
+              width: 880,
+              height: 50,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 2,
+              isLocked: false,
+              text: ':: નિમંત્રક ::',
+              fontFamily: 'KAP011',
+              fontSize: 32,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: '700',
+              translations: {
+                English: ':: Inviter ::',
+                Gujarati: ':: નિમંત્રક ::'
+              }
+            },
+            {
+              id: `elem_family_snehadhin_left_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 80,
+              y: 190,
+              width: 440,
+              height: 250,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 3,
+              isLocked: false,
+              text: 'ભરતભાઈ ગોપાલભાઈ દેસાઈ\nગોપાલભાઈ રાધેશ્યામભાઈ દેસાઈ\nભરતભાઈ ગોપાલભાઈ દેસાઈ\nદરપણ રાજકુમાર, લક્ષ્મણ નગર',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#8A1E2B',
+              lineHeight: 1.5,
+              alignment: 'center',
+              translations: {
+                English: 'Bharatbhai Gopalbhai Desai\nGopalbhai Radheshyambhai Desai\nBharatbhai Gopalbhai Desai\nDarpan Rajkumar, Laxman Nagar',
+                Gujarati: 'ભરતભાઈ ગોપાલભાઈ દેસાઈ\nગોપાલભાઈ રાધેશ્યામભાઈ દેસાઈ\nભરતભાઈ ગોપાલભાઈ દેસાઈ\nદરપણ રાજકુમાર, લક્ષ્મણ નગર'
+              }
+            },
+            {
+              id: `elem_family_snehadhin_right_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 560,
+              y: 190,
+              width: 440,
+              height: 250,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 4,
+              isLocked: false,
+              text: 'પ્લોટ નં.૧, બાપા સીતારામ ચોક\nકૃષ્ણકુંજ એપાર્ટમેન્ટ,\nસિલ્વર રેસિડન્સ સોસાયટી સામે,\nનાનાપુરા ગામ, સુરત',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#8A1E2B',
+              lineHeight: 1.5,
+              alignment: 'center',
+              translations: {
+                English: 'Plot No. 1, Bapa Sitaram Chowk\nKrishnakunj Apartment,\nOpp. Silver Residence Society,\nNanapura Village, Surat',
+                Gujarati: 'પ્લોટ નં.૧, બાપા સીતારામ ચોક\nકૃષ્ણકુંજ એપાર્ટમેન્ટ,\nસિલ્વર રેસિડન્સ સોસાયટી સામે,\nનાનાપુરા ગામ, સુરત'
+              }
+            },
+            {
+              id: `elem_family_darshnabhilashi_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 460,
+              width: 880,
+              height: 50,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 5,
+              isLocked: false,
+              text: ':: ભોજન સમારંભ ::',
+              fontFamily: 'KAP011',
+              fontSize: 32,
+              color: '#3E603B',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: '700',
+              translations: {
+                English: ':: Dinner Feast ::',
+                Gujarati: ':: ભોજન સમારંભ ::'
+              }
+            },
+            {
+              id: `elem_family_darshna_left_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 520,
+              width: 880,
+              height: 250,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 6,
+              isLocked: false,
+              text: 'બા. ગ. સુ. રાઉભાઈ તથા કલ્પના બેન ના સુપુત્ર\nસૌરભ કુમાર\nઆપના ............ સહિત પધારવા વિનંતી.',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#8A1E2B',
+              lineHeight: 1.5,
+              alignment: 'center',
+              translations: {
+                English: 'Son of Ba. Ga. Su. Raubhai & Kalpana Ben\nSaurabh Kumar\nYou are cordially requested to join with family.',
+                Gujarati: 'બા. ગ. સુ. રાઉભાઈ તથા કલ્પના બેન ના સુપુત્ર\nસૌરભ કુમાર\nઆપના ............ સહિત પધારવા વિનંતી.'
+              }
+            }
+          ];
+          break;
+        case 6:
+          page.elements = [
+            {
+              id: `elem_thanks_mantra_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 80,
+              width: 880,
+              height: 60,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 1,
+              isLocked: false,
+              text: '|| શ્રી ગણેશાય નમઃ ||',
+              fontFamily: 'Hind Vadodara',
+              fontSize: 18,
+              color: '#AA820A',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: '600',
+              translations: {
+                English: '|| OM SHREE GANESHAYA NAMAH ||',
+                Gujarati: '|| શ્રી ગણેશાય નમઃ ||'
+              }
+            },
+            {
+              id: `elem_thanks_pratiksha_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 150,
+              width: 880,
+              height: 60,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 2,
+              isLocked: false,
+              text: 'આપ સ્નેહીજનોની પ્રતિક્ષામાં',
+              fontFamily: 'Rasa',
+              fontSize: 24,
+              color: '#8A1E2B',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: '500',
+              translations: {
+                English: 'Waiting for your presence',
+                Gujarati: 'આપ સ્નેહીજનોની પ્રતિક્ષામાં'
+              }
+            },
+            {
+              id: `elem_thanks_desc_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 350,
+              width: 880,
+              height: 220,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 4,
+              isLocked: false,
+              text: 'આ ભાવભર્યું આમંત્રણ રુબરૂ મળ્યા તુલ્ય સમજવું\nOK\nએવો જવાબ આપશો.\nઆ ડિજીટલ આમંત્રણ સ્વીકાર્યું તે બદલ\nઆપનો ખૂબ ખૂબ આભાર...',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#8A1E2B',
+              lineHeight: 1.5,
+              alignment: 'center',
+              fontWeight: '500',
+              translations: {
+                English: 'Please consider this digital invitation as personal.\nPlease reply with OK.\nThank you for accepting our digital invitation.',
+                Gujarati: 'આ ભાવભર્યું આમંત્રણ રુબરૂ મળ્યા તુલ્ય સમજવું\nOK\nએવો જવાબ આપશો.\nઆ ડિજીટલ આમંત્રણ સ્વીકાર્યું તે બદલ\nઆપનો ખૂબ ખૂબ આભાર...'
+              }
+            },
+            {
+              id: `elem_thanks_bottom_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 880,
+              width: 880,
+              height: 80,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 6,
+              isLocked: false,
+              text: 'ચાંદલો અને ભેટ અસ્વીકાર્ય છે.',
+              fontFamily: 'Rasa',
+              fontSize: 22,
+              color: '#8A1E2B',
+              lineHeight: 1.2,
+              alignment: 'center',
+              fontWeight: 'bold',
+              translations: {
+                English: 'Gift and Cash not accepted.',
+                Gujarati: 'ચાંદલો અને ભેટ અસ્વીકાર્ય છે.'
+              }
+            }
+          ];
+          break;
+        default:
+          page.elements = [
+            {
+              id: `elem_blank_${Math.random().toString(36).substr(2, 9)}`,
+              type: 'text',
+              x: 100,
+              y: 400,
+              width: 880,
+              height: 100,
+              rotation: 0,
+              opacity: 1,
+              zIndex: 1,
+              isLocked: false,
+              text: 'Double click to edit text',
+              fontFamily: 'Rasa',
+              fontSize: 36,
+              color: '#4A2E35',
+              lineHeight: 1.2,
+              alignment: 'center',
+              translations: {
+                English: 'Double click to edit text'
+              }
+            }
+          ];
+      }
+    } else if (isWedding && (!page.elements || page.elements.length === 0)) {
       switch (idx) {
         case 0:
           page.elements = [

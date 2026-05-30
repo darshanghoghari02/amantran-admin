@@ -470,14 +470,16 @@ export default function CanvasArea() {
                 {isText ? (
                   <div
                     style={{
-                      fontFamily: elem.fontFamily || 'Rasa',
-                      fontSize: `${elem.fontSize ?? 36}px`,
-                      color: elem.color || '#4A2E35',
-                      lineHeight: elem.lineHeight ?? 1.2,
-                      textAlign: (elem.alignment as any) || 'center',
-                      fontWeight: elem.fontWeight || 'normal',
-                      letterSpacing: elem.letterSpacing ? `${elem.letterSpacing}px` : '0px',
-                      textShadow: elem.textShadow || 'none',
+                      fontFamily: elem.languageStyles?.[selectedLanguage]?.fontFamily || elem.fontFamily || 'Rasa',
+                      fontSize: `${elem.languageStyles?.[selectedLanguage]?.fontSize ?? elem.fontSize ?? 36}px`,
+                      color: elem.languageStyles?.[selectedLanguage]?.color || elem.color || '#4A2E35',
+                      lineHeight: elem.languageStyles?.[selectedLanguage]?.lineHeight ?? elem.lineHeight ?? 1.2,
+                      textAlign: (elem.languageStyles?.[selectedLanguage]?.alignment || elem.alignment as any) || 'center',
+                      fontWeight: elem.languageStyles?.[selectedLanguage]?.fontWeight || elem.fontWeight || 'normal',
+                      letterSpacing: elem.languageStyles?.[selectedLanguage]?.letterSpacing !== undefined 
+                        ? `${elem.languageStyles[selectedLanguage].letterSpacing}px` 
+                        : (elem.letterSpacing ? `${elem.letterSpacing}px` : '0px'),
+                      textShadow: elem.languageStyles?.[selectedLanguage]?.textShadow || elem.textShadow || 'none',
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
                       overflowWrap: 'break-word',

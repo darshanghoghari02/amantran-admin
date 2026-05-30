@@ -60,6 +60,52 @@ export default function RootPage() {
     return () => clearInterval(intervalId);
   }, []);
 
+  // Dynamically load custom fonts into the browser DOM
+  useEffect(() => {
+    async function loadCustomFonts() {
+      if (backendStatus !== 'online') return;
+      try {
+        const res = await fetch(`${API_URL}/api/fonts`);
+        const fonts = await res.json();
+        if (Array.isArray(fonts)) {
+          const activeFonts = fonts.filter((f) => f.isActive);
+          
+          let styleContent = '';
+          activeFonts.forEach((f) => {
+            const cleanPath = f.localPath.startsWith('/') ? f.localPath : `/${f.localPath}`;
+            const fontUrl = `${API_URL}${cleanPath}`;
+            styleContent += `
+              @font-face {
+                font-family: '${f.family}';
+                src: url('${fontUrl}') format('truetype');
+                font-weight: normal;
+                font-style: normal;
+                font-display: swap;
+              }
+            `;
+          });
+
+          // Inject into document head
+          const id = 'dynamic-custom-fonts';
+          const existingStyle = document.getElementById(id);
+          if (existingStyle) {
+            existingStyle.textContent = styleContent;
+          } else {
+            const style = document.createElement('style');
+            style.id = id;
+            style.textContent = styleContent;
+            document.head.appendChild(style);
+          }
+          console.log(`✨ Dynamically loaded ${activeFonts.length} custom typographies into browser.`);
+        }
+      } catch (err) {
+        console.error('Failed to dynamically load custom fonts:', err);
+      }
+    }
+    
+    loadCustomFonts();
+  }, [backendStatus, currentTab]);
+
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');

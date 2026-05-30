@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Trash2, 
   Copy, 
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useCanvasStore } from '../../store/canvasStore';
 import { translateToAll } from '../../utils/translate';
+import { API_URL } from '@/config';
 
 export default function RightPanel() {
   const { 
@@ -30,6 +31,31 @@ export default function RightPanel() {
   } = useCanvasStore();
 
   const [isTranslating, setIsTranslating] = useState(false);
+  const [availableFonts, setAvailableFonts] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function fetchAllFonts() {
+      if (!template) return;
+      try {
+        const res = await fetch(`${API_URL}/api/fonts`);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const fontFamilies = data.filter((f: any) => f.isActive).map((f: any) => f.family);
+          // Merge template fonts and all database fonts, deduplicating them
+          const templateFonts = template?.fonts || [];
+          const merged = Array.from(new Set([...templateFonts, ...fontFamilies]));
+          setAvailableFonts(merged);
+        } else {
+          setAvailableFonts(template?.fonts || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch available fonts in editor panel:", err);
+        setAvailableFonts(template?.fonts || []);
+      }
+    }
+    
+    fetchAllFonts();
+  }, [template?.fonts]);
 
   if (!template) return null;
 
@@ -199,8 +225,8 @@ export default function RightPanel() {
                 disabled={isLocked}
                 className="w-full px-2 py-2.5 text-xs rounded-xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark focus:outline-none"
               >
-                {template.fonts.map((f) => (
-                  <option key={f} value={f}>{f}</option>
+                {(availableFonts.length > 0 ? availableFonts : (template.fonts || [])).map((f) => (
+                  <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
                 ))}
                 <option value="sans-serif">System Sans</option>
               </select>

@@ -1,4 +1,4 @@
-import { API_URL } from '@/config';
+import { API_URL, getImageUrl } from '@/config';
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, Loader2 } from 'lucide-react';
 import { useCanvasStore } from '../../store/canvasStore';
@@ -125,7 +125,7 @@ export default function ChooseGaneshaModal() {
             }`}
           >
             <img
-              src={`${API_URL}/assets/images/stickers/ganesh4.png`}
+              src={getImageUrl('/assets/images/stickers/ganesh4.png')}
               alt="Ganesha Red Outline"
               className="w-full h-full object-contain"
               onError={(e) => {
@@ -144,7 +144,7 @@ export default function ChooseGaneshaModal() {
             }`}
           >
             <img
-              src={`${API_URL}/assets/images/stickers/ganesh2.png`}
+              src={getImageUrl('/assets/images/stickers/ganesh2.png')}
               alt="Ganesha Colorful"
               className="w-full h-full object-contain"
               onError={(e) => {
@@ -163,7 +163,7 @@ export default function ChooseGaneshaModal() {
             }`}
           >
             <img
-              src={`${API_URL}/assets/images/stickers/ganesh3.png`}
+              src={getImageUrl('/assets/images/stickers/ganesh3.png')}
               alt="Ganesha Golden"
               className="w-full h-full object-contain"
               onError={(e) => {
@@ -195,7 +195,7 @@ export default function ChooseGaneshaModal() {
               <Loader2 className="w-[18px] h-[18px] animate-spin text-[#F94C66]" />
             ) : selectedKey === 'uploaded' && customImage ? (
               <img
-                src={`${API_URL}${customImage}`}
+                src={getImageUrl(customImage)}
                 alt="Custom uploaded"
                 className="w-full h-full object-contain"
               />

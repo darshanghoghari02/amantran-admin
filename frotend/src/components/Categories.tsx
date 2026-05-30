@@ -1,4 +1,4 @@
-import { API_URL } from '@/config';
+import { API_URL, getImageUrl } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Edit3, Trash2, CheckCircle2, XCircle, Upload, Eye } from 'lucide-react';
 import { Category } from '../types';
@@ -192,7 +192,7 @@ export default function Categories() {
                     {cat.imageUrl ? (
                       <div className="w-14 h-10 rounded-lg overflow-hidden border border-wedding-pink-medium/40 bg-gray-100 flex items-center justify-center">
                         <img 
-                          src={cat.imageUrl.startsWith('/') ? `${API_URL}${cat.imageUrl}` : cat.imageUrl} 
+                          src={getImageUrl(cat.imageUrl)} 
                           alt={cat.name} 
                           className="w-full h-full object-cover"
                         />
@@ -328,7 +328,7 @@ export default function Categories() {
                   {imageUrl ? (
                     <div className="w-24 h-16 rounded-xl overflow-hidden border border-wedding-pink-medium/50 shadow-sm relative group bg-gray-100 flex items-center justify-center">
                       <img 
-                        src={imageUrl.startsWith('/') ? `${API_URL}${imageUrl}` : imageUrl} 
+                        src={getImageUrl(imageUrl)} 
                         alt="Preview" 
                         className="w-full h-full object-cover"
                       />

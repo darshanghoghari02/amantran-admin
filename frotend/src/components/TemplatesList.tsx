@@ -1,4 +1,4 @@
-import { API_URL } from '@/config';
+import { API_URL, getImageUrl } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { 
   PlusCircle, 
@@ -1860,7 +1860,7 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                 {/* Visual Thumbnail Frame */}
                 <div className="aspect-[4/5] bg-gray-50 border-b border-wedding-pink-medium/20 relative overflow-hidden flex items-center justify-center">
                   <img 
-                    src={tpl.thumbnail.startsWith('/') ? `${API_URL}${tpl.thumbnail}` : tpl.thumbnail} 
+                    src={getImageUrl(tpl.thumbnail)} 
                     alt={tpl.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />

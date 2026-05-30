@@ -31,16 +31,16 @@ class DatabaseService {
         await fs.access(FIREBASE_KEY_PATH);
         serviceAccount = JSON.parse(await fs.readFile(FIREBASE_KEY_PATH, 'utf-8'));
       }
-      
+
       // Initialize Firebase Admin with dynamic storageBucket configuration
       const app = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
         storageBucket: serviceAccount.project_id ? `${serviceAccount.project_id}.appspot.com` : undefined
       });
-      
+
       const dbId = process.env.FIREBASE_DATABASE_ID || undefined;
       this.db = dbId ? getFirestore(app, dbId) : getFirestore(app);
-      
+
       try {
         // Run a test query to verify connection and database existence
         await this.db.collection('categories').limit(1).get();
@@ -49,14 +49,14 @@ class DatabaseService {
         console.log('🔥 Connected successfully to Firebase Firestore.', dbId ? `Database instance: ${dbId}` : 'Database instance: (default)');
       } catch (testError) {
         // If it failed because a custom database was not found, try falling back to the '(default)' database
-        const isNotFoundError = testError.code === 5 || 
-                              testError.message?.includes('NOT_FOUND') || 
-                              testError.message?.toLowerCase().includes('not found');
-        
+        const isNotFoundError = testError.code === 5 ||
+          testError.message?.includes('NOT_FOUND') ||
+          testError.message?.toLowerCase().includes('not found');
+
         if (dbId && isNotFoundError) {
           console.warn(`⚠️ Custom database ID '${dbId}' was not found. Attempting fallback to the '(default)' database...`);
           this.db = getFirestore(app);
-          
+
           // Test the default database connection
           await this.db.collection('categories').limit(1).get();
           this.isFirebase = true;
@@ -67,7 +67,7 @@ class DatabaseService {
           throw testError;
         }
       }
-      
+
       // Clean up any orphaned ghost template subcollections in the background
       this.cleanupOrphanedFirestoreTemplates();
     } catch (error) {
@@ -86,13 +86,13 @@ class DatabaseService {
       console.log('🧹 Scanning Firestore for orphaned/ghost template subcollections...');
       const templatesRef = this.db.collection('templates');
       const docRefs = await templatesRef.listDocuments();
-      
+
       let count = 0;
       for (const docRef of docRefs) {
         const docSnap = await docRef.get();
         if (!docSnap.exists) {
           console.log(`🧹 Found orphaned/ghost template document: ${docRef.id}. Cleaning up subcollections recursively...`);
-          
+
           // Delete all pages in this page's subcollection
           const pagesSnapshot = await docRef.collection('pages').get();
           for (const pageDoc of pagesSnapshot.docs) {
@@ -444,7 +444,7 @@ class DatabaseService {
         currentPageIds.add(pageId);
 
         const pageRef = templateRef.collection('pages').doc(pageId);
-        
+
         // Write the page document
         await pageRef.set({
           id: pageId,
@@ -538,10 +538,10 @@ class DatabaseService {
 
     if (this.isFirebase) {
       try {
-        const docRef = documentData.id 
+        const docRef = documentData.id
           ? this.db.collection(collectionName).doc(documentData.id)
           : this.db.collection(collectionName).doc();
-        
+
         const finalData = { ...docWithDates, id: docRef.id };
         await docRef.set(finalData);
         if (collectionName === 'templates') {
@@ -554,12 +554,12 @@ class DatabaseService {
         // Write to local database as fallback
         const data = await this.readLocal();
         if (!data[collectionName]) data[collectionName] = [];
-        
+
         const newDoc = {
           id: documentData.id || `${collectionName.slice(0, 3)}_${Math.random().toString(36).substr(2, 9)}`,
           ...docWithDates
         };
-        
+
         data[collectionName].push(newDoc);
         await this.writeLocal(data);
         return newDoc;
@@ -567,12 +567,12 @@ class DatabaseService {
     } else {
       const data = await this.readLocal();
       if (!data[collectionName]) data[collectionName] = [];
-      
+
       const newDoc = {
         id: documentData.id || `${collectionName.slice(0, 3)}_${Math.random().toString(36).substr(2, 9)}`,
         ...docWithDates
       };
-      
+
       data[collectionName].push(newDoc);
       await this.writeLocal(data);
       return newDoc;
@@ -602,7 +602,7 @@ class DatabaseService {
         const list = data[collectionName] || [];
         const index = list.findIndex(item => item.id === id);
         if (index === -1) throw new Error(`Document not found in local db ${collectionName} with id: ${id}`);
-        
+
         const updatedItem = {
           ...list[index],
           ...dataWithUpdate
@@ -617,7 +617,7 @@ class DatabaseService {
       const list = data[collectionName] || [];
       const index = list.findIndex(item => item.id === id);
       if (index === -1) throw new Error(`Document not found in ${collectionName} with id: ${id}`);
-      
+
       const updatedItem = {
         ...list[index],
         ...dataWithUpdate
@@ -634,7 +634,7 @@ class DatabaseService {
     try {
       const templateRef = this.db.collection('templates').doc(templateId);
       const pagesSnapshot = await templateRef.collection('pages').get();
-      
+
       for (const pageDoc of pagesSnapshot.docs) {
         // Delete all elements in this page's subcollection
         const elementsSnapshot = await pageDoc.ref.collection('elements').get();

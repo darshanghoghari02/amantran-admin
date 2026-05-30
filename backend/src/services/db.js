@@ -32,10 +32,62 @@ class DatabaseService {
         serviceAccount = JSON.parse(await fs.readFile(FIREBASE_KEY_PATH, 'utf-8'));
       }
 
-      // Initialize Firebase Admin with dynamic storageBucket configuration
+      // Determine the correct storage bucket dynamically
+      let selectedBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.STORAGE_BUCKET || undefined;
+
+      if (!selectedBucket && serviceAccount.project_id) {
+        const primaryBucket = `${serviceAccount.project_id}.appspot.com`;
+        const secondaryBucket = `${serviceAccount.project_id}.firebasestorage.app`;
+        
+        console.log(`🔍 Checking Firebase Storage bucket accessibility...`);
+        
+        // Use a temporary named Firebase App to test bucket accessibility
+        const tempAppName = `temp-discovery-${Date.now()}`;
+        let tempApp;
+        try {
+          tempApp = admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+          }, tempAppName);
+          
+          // Test primary bucket
+          try {
+            const bucket = tempApp.storage().bucket(primaryBucket);
+            await bucket.getFiles({ maxResults: 1 });
+            selectedBucket = primaryBucket;
+            console.log(`✅ Verified Firebase Storage bucket: ${primaryBucket}`);
+          } catch (primaryErr) {
+            // Test secondary bucket
+            try {
+              const bucket = tempApp.storage().bucket(secondaryBucket);
+              await bucket.getFiles({ maxResults: 1 });
+              selectedBucket = secondaryBucket;
+              console.log(`✅ Verified Firebase Storage bucket: ${secondaryBucket}`);
+            } catch (secondaryErr) {
+              // If both failed, Firebase Storage might not be enabled yet in Firebase Console
+              console.warn(`⚠️ Warning: Firebase Storage bucket is not provisioned or accessible.`);
+              console.warn(`👉 Please ensure Firebase Storage is enabled in the Firebase Console:`);
+              console.warn(`   https://console.firebase.google.com/project/${serviceAccount.project_id}/storage`);
+              console.warn(`🔄 Falling back to local disk storage for asset uploads.`);
+              // Default to primary so standard SDK APIs do not crash on startup
+              selectedBucket = primaryBucket;
+            }
+          }
+        } catch (initErr) {
+          console.warn(`⚠️ Error during storage bucket discovery:`, initErr.message);
+          selectedBucket = primaryBucket;
+        } finally {
+          if (tempApp) {
+            try {
+              await tempApp.delete();
+            } catch (_) {}
+          }
+        }
+      }
+
+      // Initialize Firebase Admin with verified storageBucket configuration
       const app = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        storageBucket: serviceAccount.project_id ? `${serviceAccount.project_id}.appspot.com` : undefined
+        storageBucket: selectedBucket
       });
 
       const dbId = process.env.FIREBASE_DATABASE_ID || undefined;

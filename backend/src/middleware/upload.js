@@ -69,11 +69,13 @@ const storage = multer.diskStorage({
 
 // File validation
 const fileFilter = (req, file, cb) => {
-  const filetypes = /jpeg|jpg|png|webp|gif|ttf|otf|woff|woff2/;
-  const mimetype = filetypes.test(file.mimetype);
-  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+  const allowedExts = /jpeg|jpg|png|webp|gif|ttf|otf|woff|woff2/;
+  const extname = allowedExts.test(path.extname(file.originalname).toLowerCase());
+  
+  // Safely allow standard image or font mimetypes, or octet-stream fallbacks for fonts
+  const mimetype = /image|font|octet-stream|x-font|sfnt/.test(file.mimetype);
 
-  if (mimetype && extname) {
+  if (extname && mimetype) {
     return cb(null, true);
   }
   

@@ -1935,7 +1935,14 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                   </div>
 
                   {/* Actions Grid */}
-                  <div className="grid grid-cols-3 gap-2 pt-3 border-t border-wedding-pink-medium/20">
+                  <div className="grid grid-cols-4 gap-1.5 pt-3 border-t border-wedding-pink-medium/20">
+                    <button
+                      onClick={() => openEditModal(tpl)}
+                      className="py-2 rounded-xl text-[10px] font-bold border border-wedding-pink-medium/30 text-wedding-pink-dark hover:bg-wedding-pink-light/35 flex items-center justify-center gap-1"
+                      title="Edit Template Details"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" /> Edit
+                    </button>
                     <button
                       onClick={() => handleToggleState(tpl.id, tpl.isActive)}
                       className={`py-2 rounded-xl text-[10px] font-bold border transition-colors flex items-center justify-center gap-1 ${

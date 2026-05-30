@@ -1911,16 +1911,18 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <h4 className="text-base font-bold text-wedding-charcoal-dark tracking-tight leading-snug">{tpl.name}</h4>
-                      <button
-                        onClick={() => openEditModal(tpl)}
-                        className="p-1.5 hover:bg-wedding-pink-light text-wedding-pink-dark rounded-lg transition-colors shrink-0"
-                        title="Edit Template Details"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
                     </div>
                     <p className="text-[11px] text-gray-500 font-mono">{tpl.slug}</p>
                   </div>
+
+                  {/* Canvas Layout Editor Button (Always Visible) */}
+                  <button
+                    onClick={() => onOpenEditor(tpl)}
+                    className="w-full py-3 bg-wedding-charcoal-dark hover:bg-wedding-charcoal-light text-wedding-gold-light hover:text-white text-xs font-bold rounded-2xl shadow flex items-center justify-center gap-2 transition-all duration-300 transform hover:-translate-y-0.5"
+                  >
+                    <Palette className="w-4 h-4 text-wedding-pink-medium" />
+                    Design in Canvas
+                  </button>
 
                   {/* Metadata Chips */}
                   <div className="flex flex-col gap-2 pt-2 border-t border-wedding-pink-medium/20">
@@ -1941,7 +1943,7 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                       className="py-2 rounded-xl text-[10px] font-bold border border-wedding-pink-medium/30 text-wedding-pink-dark hover:bg-wedding-pink-light/35 flex items-center justify-center gap-1"
                       title="Edit Template Details"
                     >
-                      <Edit3 className="w-3.5 h-3.5" /> Edit
+                      <Edit3 className="w-3.5 h-3.5" /> Details
                     </button>
                     <button
                       onClick={() => handleToggleState(tpl.id, tpl.isActive)}

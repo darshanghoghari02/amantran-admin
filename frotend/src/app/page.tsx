@@ -13,18 +13,22 @@ import Languages from '../components/Languages';
 import Users from '../components/Users';
 import EditorWorkspace from '../components/editor/EditorWorkspace';
 import { useCanvasStore } from '../store/canvasStore';
+import { User } from '../types';
 
 export default function RootPage() {
   // Navigation & Session states
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [isFirebase, setIsFirebase] = useState(false);
   const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Auth Form State
   const [email, setEmail] = useState('admin@amantran.com');
   const [password, setPassword] = useState('admin123');
   const [authError, setAuthError] = useState('');
+  const [loggingIn, setLoggingIn] = useState(false);
 
   const { setTemplate } = useCanvasStore();
 
@@ -106,15 +110,48 @@ export default function RootPage() {
     loadCustomFonts();
   }, [backendStatus, currentTab]);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  // Sync logged-in admin user's profile from database in real-time
+  useEffect(() => {
+    if (isLoggedIn && currentUser && currentUser.id !== 'admin_super') {
+      fetch(`${API_URL}/api/users/${currentUser.id}`)
+        .then(res => {
+          if (res.ok) return res.json();
+          throw new Error('Database sync skipped');
+        })
+        .then(updated => {
+          if (updated && updated.displayName) {
+            setCurrentUser(updated);
+          }
+        })
+        .catch(err => console.log('Dynamic user sync:', err.message));
+    }
+  }, [currentTab, isLoggedIn]);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
+    setLoggingIn(true);
 
-    // Secure credentials validation
-    if (email === 'admin@amantran.com' && password === 'admin123') {
-      setIsLoggedIn(true);
-    } else {
-      setAuthError('Incorrect administrative credentials. Use admin@amantran.com / admin123 for developer testing.');
+    try {
+      const res = await fetch(`${API_URL}/api/users/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (res.ok) {
+        const user = await res.json();
+        setCurrentUser(user);
+        setIsLoggedIn(true);
+      } else {
+        const err = await res.json();
+        setAuthError(err.error || 'Authentication failed. Incorrect email or password.');
+      }
+    } catch (err) {
+      console.error('Login submit error:', err);
+      setAuthError('Connection failed. Please ensure the backend is running.');
+    } finally {
+      setLoggingIn(false);
     }
   };
 
@@ -182,9 +219,10 @@ export default function RootPage() {
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-wedding-charcoal-dark hover:bg-wedding-charcoal-light text-wedding-gold-light hover:text-white font-bold text-sm rounded-2xl shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
+              disabled={loggingIn}
+              className="w-full py-3.5 bg-wedding-charcoal-dark hover:bg-wedding-charcoal-light text-wedding-gold-light hover:text-white font-bold text-sm rounded-2xl shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-60"
             >
-              Sign In to Dashboard
+              {loggingIn ? 'Authenticating...' : 'Sign In to Dashboard'}
             </button>
           </form>
 
@@ -206,34 +244,75 @@ export default function RootPage() {
     );
   }
 
+  // Granular Tab Access Permission Guard
+  const hasAccessToTab = (tab: string, role: string | undefined): boolean => {
+    if (!role) return false;
+    if (role === 'super_admin') return true;
+    
+    if (role === 'content_manager') {
+      return tab !== 'users';
+    }
+    
+    if (role === 'editor') {
+      return tab === 'dashboard' || tab === 'templates' || tab === 'editor';
+    }
+    
+    if (role === 'user') {
+      return tab === 'dashboard' || tab === 'templates';
+    }
+    
+    return false;
+  };
+
   // 2. Standard Dashboard panels view
   return (
-    <div className="flex h-screen overflow-hidden bg-wedding-bg">
+    <div className="flex h-screen overflow-hidden bg-wedding-bg relative">
       {/* Dynamic Navigation Left Sidebar */}
-      <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} />
+      <Sidebar 
+        currentTab={currentTab} 
+        setCurrentTab={setCurrentTab} 
+        currentUser={currentUser || undefined}
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        onLogout={() => {
+          setIsLoggedIn(false);
+          setCurrentUser(null);
+          setCurrentTab('dashboard');
+        }}
+      />
+
+      {/* Sidebar mobile dark overlay backdrop */}
+      {isSidebarOpen && (
+        <div 
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 bg-wedding-charcoal-dark/50 backdrop-blur-xs z-40 md:hidden animate-fadeIn transition-opacity duration-300"
+        />
+      )}
 
       {/* Central content screen wrapper */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden w-full">
         {/* Dynamic header Topbar */}
         <Topbar 
           currentTab={currentTab} 
           isFirebase={isFirebase} 
           backendStatus={backendStatus} 
           apiUrl={API_URL} 
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
         {/* Dynamic content rendering body */}
         <main className="flex-1 p-8 overflow-y-auto bg-wedding-bg">
-          {currentTab === 'dashboard' && (
+          {currentTab === 'dashboard' && hasAccessToTab('dashboard', currentUser?.role) && (
             <Dashboard onNavigate={setCurrentTab} />
           )}
 
-          {currentTab === 'categories' && (
+          {currentTab === 'categories' && hasAccessToTab('categories', currentUser?.role) && (
             <Categories />
           )}
 
-          {currentTab === 'templates' && (
+          {currentTab === 'templates' && hasAccessToTab('templates', currentUser?.role) && (
             <TemplatesList 
+              currentUser={currentUser || undefined}
               onOpenEditor={(tpl) => {
                 setTemplate(tpl);
                 setCurrentTab('editor');
@@ -241,16 +320,33 @@ export default function RootPage() {
             />
           )}
 
-          {currentTab === 'fonts' && (
+          {currentTab === 'fonts' && hasAccessToTab('fonts', currentUser?.role) && (
             <Fonts />
           )}
 
-          {currentTab === 'languages' && (
+          {currentTab === 'languages' && hasAccessToTab('languages', currentUser?.role) && (
             <Languages />
           )}
 
-          {currentTab === 'users' && (
+          {currentTab === 'users' && hasAccessToTab('users', currentUser?.role) && (
             <Users />
+          )}
+
+          {/* Access Denied Warning Redirect */}
+          {currentUser && !hasAccessToTab(currentTab, currentUser.role) && (
+            <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3 text-center bg-white border border-red-200 rounded-3xl p-8 shadow-sm">
+              <span className="p-4 bg-red-50 text-red-600 rounded-full font-bold text-xl">⚠️</span>
+              <h4 className="font-bold text-lg text-wedding-charcoal-dark">Section Access Restricted</h4>
+              <p className="text-sm text-gray-500 max-w-sm">
+                Your active role ({currentUser.role.toUpperCase()}) does not possess the administrative privileges required to access this system module.
+              </p>
+              <button 
+                onClick={() => setCurrentTab('dashboard')} 
+                className="mt-2 px-5 py-2.5 bg-wedding-charcoal-dark hover:bg-wedding-charcoal-light text-wedding-gold-light hover:text-white text-xs font-bold rounded-xl transition-all shadow"
+              >
+                Return to Dashboard
+              </button>
+            </div>
           )}
         </main>
       </div>

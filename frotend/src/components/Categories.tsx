@@ -173,8 +173,9 @@ export default function Categories() {
           <p className="text-xs font-semibold text-wedding-pink-dark">Loading your directories...</p>
         </div>
       ) : (
-        <div className="bg-white border border-wedding-pink-medium/40 rounded-3xl shadow-sm overflow-hidden">
-          <table className="w-full text-left border-collapse">
+        <div className="bg-white border border-wedding-pink-medium/40 rounded-3xl shadow-sm overflow-hidden animate-fadeIn">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
               <tr className="bg-wedding-pink-light/35 border-b border-wedding-pink-medium/30 text-wedding-charcoal-dark font-bold text-xs uppercase tracking-wider">
                 <th className="py-4 px-6">Image</th>
@@ -243,6 +244,7 @@ export default function Categories() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

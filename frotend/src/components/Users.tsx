@@ -1,6 +1,6 @@
 import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
-import { Search, ShieldAlert, CheckCircle, ShieldCheck, Trash2, Users as UsersIcon } from 'lucide-react';
+import { Search, ShieldAlert, ShieldCheck, Trash2, Users as UsersIcon, PlusCircle, Edit3, Check, X } from 'lucide-react';
 import { User } from '../types';
 
 export default function Users() {
@@ -8,6 +8,15 @@ export default function Users() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
+
+  // Creation & Editing Modal States
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('editor');
+  const [password, setPassword] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -21,13 +30,32 @@ export default function Users() {
 
       const res = await fetch(`${API_URL}/api/users?${params.toString()}`);
       const data = await res.json();
-      setUsers(data);
+      setUsers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to load users:', error);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
   }
+
+  const openAddModal = () => {
+    setEditingUser(null);
+    setDisplayName('');
+    setEmail('');
+    setRole('editor');
+    setPassword('');
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (user: User) => {
+    setEditingUser(user);
+    setDisplayName(user.displayName || '');
+    setEmail(user.email || '');
+    setRole(user.role || 'editor');
+    setPassword(user.password || '');
+    setIsModalOpen(true);
+  };
 
   const handleToggleBlock = async (id: string, currentlyBlocked: boolean) => {
     try {
@@ -59,6 +87,49 @@ export default function Users() {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!displayName || !email || !role) {
+      alert('Name, email, and role are required fields.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      let res;
+      const payload = { displayName, email, role, password };
+
+      if (editingUser) {
+        // Update user
+        res = await fetch(`${API_URL}/api/users/${editingUser.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        // Create user
+        res = await fetch(`${API_URL}/api/users`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      if (res.ok) {
+        setIsModalOpen(false);
+        fetchUsers();
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Operation failed.');
+      }
+    } catch (error) {
+      console.error('Submit user error:', error);
+      alert('An error occurred while saving.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'super_admin':
@@ -87,7 +158,7 @@ export default function Users() {
           />
         </div>
 
-        <div className="w-full md:w-auto flex gap-4">
+        <div className="w-full md:w-auto flex gap-3 shrink-0">
           <select
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
@@ -97,7 +168,16 @@ export default function Users() {
             <option value="super_admin">Super Admin</option>
             <option value="editor">Editor</option>
             <option value="content_manager">Content Manager</option>
+            <option value="user">User</option>
           </select>
+
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-[#a0525e] text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 shrink-0"
+          >
+            <PlusCircle className="w-5 h-5" />
+            Create User
+          </button>
         </div>
       </div>
 
@@ -107,8 +187,9 @@ export default function Users() {
           <p className="text-xs font-semibold text-wedding-pink-dark">Querying active directory...</p>
         </div>
       ) : (
-        <div className="bg-white border border-wedding-pink-medium/40 rounded-3xl shadow-sm overflow-hidden">
-          <table className="w-full text-left border-collapse">
+        <div className="bg-white border border-wedding-pink-medium/40 rounded-3xl shadow-sm overflow-hidden animate-fadeIn">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
               <tr className="bg-wedding-pink-light/35 border-b border-wedding-pink-medium/30 text-wedding-charcoal-dark font-bold text-xs uppercase tracking-wider">
                 <th className="py-4 px-6">User Profile</th>
@@ -163,10 +244,17 @@ export default function Users() {
                       )}
                     </td>
                     <td className="py-4 px-6 text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end items-center gap-2">
+                        <button
+                          onClick={() => openEditModal(user)}
+                          className="p-2 text-wedding-charcoal-light hover:text-wedding-gold-dark hover:bg-wedding-pink-light/35 rounded-xl transition-all duration-200 border border-transparent hover:border-wedding-pink-medium/30"
+                          title="Edit User Profile"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleToggleBlock(user.id, user.isBlocked)}
-                          className={`p-2 rounded-xl border text-xs font-bold flex items-center gap-1 shadow-sm transition-all duration-200 ${
+                          className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1 shadow-sm transition-all duration-200 ${
                             user.isBlocked
                               ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
                               : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
@@ -189,6 +277,101 @@ export default function Users() {
               )}
             </tbody>
           </table>
+          </div>
+        </div>
+      )}
+
+      {/* CRUD User Overlay Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-wedding-charcoal-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-wedding-bg border border-wedding-pink-medium/40 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-slideUp">
+            <div className="p-6 bg-wedding-charcoal-dark text-white flex justify-between items-center">
+              <h4 className="font-bold text-lg text-wedding-gold-light">
+                {editingUser ? 'Edit User Profile' : 'Register New User'}
+              </h4>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-400 hover:text-white bg-wedding-charcoal-light p-2 rounded-xl transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+              {/* Display Name */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Full Display Name</label>
+                <input 
+                  type="text" 
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="e.g. Ramesh Patel"
+                  className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
+                  required
+                />
+              </div>
+
+              {/* Email Address */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Email Address</label>
+                <input 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@gmail.com"
+                  className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
+                  required
+                />
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Access Password</label>
+                <input 
+                  type="text" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter login password (e.g. 123456)"
+                  className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 font-mono"
+                  required
+                />
+              </div>
+
+              {/* Role Selection */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Account Role</label>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
+                  required
+                >
+                  <option value="super_admin">Super Admin</option>
+                  <option value="editor">Editor</option>
+                  <option value="content_manager">Content Manager</option>
+                  <option value="user">Standard User</option>
+                </select>
+              </div>
+
+              {/* Submit / Action Buttons */}
+              <div className="pt-4 border-t border-wedding-pink-medium/20 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-5 py-3 rounded-2xl bg-gray-100 text-wedding-charcoal-light hover:bg-gray-200 text-sm font-bold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-6 py-3 rounded-2xl bg-wedding-pink-dark hover:bg-[#a0525e] text-white text-sm font-bold shadow-lg transition-all disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save Profile'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

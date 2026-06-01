@@ -158,8 +158,9 @@ export default function Fonts() {
           <p className="text-xs font-semibold text-wedding-pink-dark">Loading your typographies...</p>
         </div>
       ) : (
-        <div className="bg-white border border-wedding-pink-medium/40 rounded-3xl shadow-sm overflow-hidden">
-          <table className="w-full text-left border-collapse">
+        <div className="bg-white border border-wedding-pink-medium/40 rounded-3xl shadow-sm overflow-hidden animate-fadeIn">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-wedding-pink-light/35 border-b border-wedding-pink-medium/30 text-wedding-charcoal-dark font-bold text-xs uppercase tracking-wider">
                 <th className="py-4 px-6">Font Family</th>
@@ -218,6 +219,7 @@ export default function Fonts() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

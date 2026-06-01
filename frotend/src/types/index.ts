@@ -91,7 +91,8 @@ export interface User {
   id: string;
   email: string;
   displayName: string;
-  role: 'super_admin' | 'editor' | 'content_manager';
+  role: 'super_admin' | 'editor' | 'content_manager' | 'user';
+  password?: string;
   isBlocked: boolean;
   invitationCount: number;
   draftsCount: number;

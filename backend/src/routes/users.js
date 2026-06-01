@@ -44,13 +44,85 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// PUT update user details (e.g. block / role)
+// POST create a new user
+router.post('/', async (req, res) => {
+  try {
+    const { email, displayName, role, password } = req.body;
+    if (!email || !displayName || !role) {
+      return res.status(400).json({ error: 'Email, display name, and role are required fields.' });
+    }
+
+    const newUser = await dbService.add('users', {
+      email,
+      displayName,
+      role,
+      password: password || '123456',
+      isBlocked: false,
+      invitationCount: 0,
+      draftsCount: 0
+    });
+
+    res.status(201).json(newUser);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST login user
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required fields.' });
+    }
+
+    // 1. Support default developer credentials
+    if (email.toLowerCase() === 'admin@amantran.com' && password === 'admin123') {
+      return res.json({
+        id: 'admin_super',
+        email: 'admin@amantran.com',
+        displayName: 'Super Admin',
+        role: 'super_admin',
+        isBlocked: false,
+        invitationCount: 18,
+        draftsCount: 6,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    // 2. Otherwise query database
+    const users = await dbService.getAll('users');
+    const matchedUser = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+
+    if (!matchedUser) {
+      return res.status(400).json({ error: 'Incorrect email or password.' });
+    }
+
+    if (matchedUser.isBlocked) {
+      return res.status(403).json({ error: 'Your account has been suspended.' });
+    }
+
+    const storedPassword = matchedUser.password || '123456';
+    if (storedPassword !== password) {
+      return res.status(400).json({ error: 'Incorrect email or password.' });
+    }
+
+    res.json(matchedUser);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT update user details (e.g. block / role / name / email / password)
 router.put('/:id', async (req, res) => {
   try {
-    const { role, isBlocked } = req.body;
+    const { displayName, email, role, isBlocked, password } = req.body;
     const updates = {};
+    if (displayName !== undefined) updates.displayName = displayName;
+    if (email !== undefined) updates.email = email;
     if (role !== undefined) updates.role = role;
     if (isBlocked !== undefined) updates.isBlocked = isBlocked;
+    if (password !== undefined) updates.password = password;
 
     const updated = await dbService.update('users', req.params.id, updates);
     res.json(updated);

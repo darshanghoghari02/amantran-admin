@@ -14,13 +14,14 @@ import {
   Upload,
   Palette
 } from 'lucide-react';
-import { Template, Category, CustomFont, Language } from '../types';
+import { Template, Category, CustomFont, Language, User } from '../types';
 
 interface TemplatesListProps {
   onOpenEditor: (template: Template) => void;
+  currentUser?: User;
 }
 
-export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
+export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesListProps) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [fonts, setFonts] = useState<CustomFont[]>([]);
@@ -1803,13 +1804,13 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
   return (
     <div className="space-y-6">
       {/* Category filters actions bar */}
-      <div className="bg-white p-6 rounded-3xl border border-wedding-pink-medium/40 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="flex gap-2 items-center flex-wrap">
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-wedding-pink-medium/40 shadow-sm flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+        <div className="flex gap-2 items-center flex-wrap w-full">
           <button
             onClick={() => setSelectedCatId('')}
             className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${!selectedCatId
-                ? 'bg-wedding-charcoal-dark text-wedding-gold-light'
-                : 'bg-wedding-pink-light/35 text-wedding-charcoal-light hover:bg-wedding-pink-light/60'
+              ? 'bg-wedding-charcoal-dark text-wedding-gold-light'
+              : 'bg-wedding-pink-light/35 text-wedding-charcoal-light hover:bg-wedding-pink-light/60'
               }`}
           >
             All Invitations
@@ -1820,8 +1821,8 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
               key={cat.id}
               onClick={() => setSelectedCatId(cat.id)}
               className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${selectedCatId === cat.id
-                  ? 'bg-wedding-charcoal-dark text-wedding-gold-light'
-                  : 'bg-wedding-pink-light/35 text-wedding-charcoal-light hover:bg-wedding-pink-light/60'
+                ? 'bg-wedding-charcoal-dark text-wedding-gold-light'
+                : 'bg-wedding-pink-light/35 text-wedding-charcoal-light hover:bg-wedding-pink-light/60'
                 }`}
             >
               {cat.name}
@@ -1829,13 +1830,15 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
           ))}
         </div>
 
-        <button
-          onClick={openAddModal}
-          className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-[#a0525e] text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 shrink-0"
-        >
-          <PlusCircle className="w-5 h-5" />
-          Create Template
-        </button>
+        {(currentUser?.role === 'super_admin' || currentUser?.role === 'content_manager' || !currentUser) && (
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-[#a0525e] text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 shrink-0 w-full sm:w-auto justify-center"
+          >
+            <PlusCircle className="w-5 h-5" />
+            Create Template
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -1844,7 +1847,7 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
           <p className="text-xs font-semibold text-wedding-pink-dark">Fetching template assets...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-fadeIn">
           {templates.length === 0 ? (
             <div className="col-span-full py-16 text-center text-gray-500 font-semibold bg-white border rounded-3xl border-wedding-pink-medium/30">
               No invitation templates inside this category directory yet.
@@ -1856,7 +1859,7 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                 className="group bg-white border border-wedding-pink-medium/40 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
               >
                 {/* Visual Thumbnail Frame */}
-                <div className="aspect-[4/5] bg-gray-50 border-b border-wedding-pink-medium/20 relative overflow-hidden flex items-center justify-center">
+                <div className="aspect-[2/3] w-full bg-gray-50 border-b border-wedding-pink-medium/20 relative overflow-hidden flex items-center justify-center">
                   <img
                     src={getImageUrl(tpl.thumbnail)}
                     alt={tpl.name}
@@ -1887,86 +1890,83 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                   </div>
 
                   {/* Design in Canvas Button overlay */}
-                  <div className="absolute inset-0 bg-wedding-charcoal-dark/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">
-                    <button
-                      onClick={() => onOpenEditor(tpl)}
-                      className="px-6 py-3.5 bg-white hover:bg-wedding-pink-light text-wedding-charcoal-dark text-xs font-extrabold rounded-2xl shadow-xl transition-all duration-200 transform scale-90 group-hover:scale-100 hover:scale-105 flex items-center gap-2"
-                    >
-                      <Palette className="w-4 h-4 text-wedding-pink-dark" />
-                      Design in Canvas
-                    </button>
-                  </div>
+                  {currentUser?.role !== 'user' && (
+                    <div className="absolute inset-0 bg-wedding-charcoal-dark/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">
+                      <button
+                        onClick={() => onOpenEditor(tpl)}
+                        className="px-6 py-3.5 bg-white hover:bg-wedding-pink-light text-wedding-charcoal-dark text-xs font-extrabold rounded-2xl shadow-xl transition-all duration-200 transform scale-90 group-hover:scale-100 hover:scale-105 flex items-center gap-2"
+                      >
+                        <Palette className="w-4 h-4 text-wedding-pink-dark" />
+                        Design in Canvas
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Details Footer */}
-                <div className="p-5 space-y-4 bg-white">
-                  <div className="space-y-1">
+                <div className="p-4 space-y-3 bg-white">
+                  <div className="space-y-0.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-semibold text-wedding-pink-dark uppercase tracking-wider">
+                      <span className="text-[10px] font-bold text-wedding-pink-dark uppercase tracking-wider">
                         {categories.find(c => c.id === tpl.categoryId)?.name || 'General'}
                       </span>
-                      <span className="text-[10px] font-mono text-gray-400">{tpl.pages?.length || 0} pages</span>
+                      <span className="text-[10px] font-semibold text-wedding-charcoal-light bg-wedding-pink-light px-2 py-0.5 rounded-md font-mono">{tpl.pages?.length || 0} pages</span>
                     </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className="text-base font-bold text-wedding-charcoal-dark tracking-tight leading-snug">{tpl.name}</h4>
-                    </div>
-                    <p className="text-[11px] text-gray-500 font-mono">{tpl.slug}</p>
+                    <h4 className="text-sm font-extrabold text-wedding-charcoal-dark truncate" title={tpl.name}>{tpl.name}</h4>
+                    <p className="text-[10px] text-gray-400 font-mono truncate">{tpl.slug}</p>
                   </div>
 
-                  {/* Canvas Layout Editor Button (Always Visible) */}
-                  <button
-                    onClick={() => onOpenEditor(tpl)}
-                    className="w-full py-3 bg-wedding-charcoal-dark hover:bg-wedding-charcoal-light text-wedding-gold-light hover:text-white text-xs font-bold rounded-2xl shadow flex items-center justify-center gap-2 transition-all duration-300 transform hover:-translate-y-0.5"
-                  >
-                    <Palette className="w-4 h-4 text-wedding-pink-medium" />
-                    Design in Canvas
-                  </button>
+                  {/* Actions Bar */}
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-wedding-pink-medium/20">
+                    {currentUser?.role === 'user' ? (
+                      <span className="flex-1 py-2 border border-wedding-pink-medium/30 text-wedding-charcoal-light/60 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 bg-gray-50/50 select-none">
+                        Read-Only View
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => onOpenEditor(tpl)}
+                        className="flex-1 py-2 bg-wedding-charcoal-dark hover:bg-wedding-charcoal-light text-wedding-gold-light hover:text-white text-xs font-bold rounded-xl shadow flex items-center justify-center gap-1.5 transition-all duration-300 transform hover:-translate-y-0.5 shrink-0"
+                      >
+                        <Palette className="w-3.5 h-3.5 text-wedding-pink-medium" />
+                        Design
+                      </button>
+                    )}
 
-                  {/* Metadata Chips */}
-                  <div className="flex flex-col gap-2 pt-2 border-t border-wedding-pink-medium/20">
-                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-                      <Type className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                      <span className="truncate">Fonts: {tpl.fonts?.join(', ') || 'Rasa'}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-                      <Languages className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                      <span className="truncate">Languages: {tpl.languages?.join(', ') || 'English'}</span>
-                    </div>
-                  </div>
-
-                  {/* Actions Grid */}
-                  <div className="grid grid-cols-4 gap-1.5 pt-3 border-t border-wedding-pink-medium/20">
-                    <button
-                      onClick={() => openEditModal(tpl)}
-                      className="py-2 rounded-xl text-[10px] font-bold border border-wedding-pink-medium/30 text-wedding-pink-dark hover:bg-wedding-pink-light/35 flex items-center justify-center gap-1"
-                      title="Edit Template Details"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" /> Details
-                    </button>
-                    <button
-                      onClick={() => handleToggleState(tpl.id, tpl.isActive)}
-                      className={`py-2 rounded-xl text-[10px] font-bold border transition-colors flex items-center justify-center gap-1 ${tpl.isActive
-                          ? 'border-amber-200 text-amber-700 bg-amber-50/50 hover:bg-amber-100/50'
-                          : 'border-green-200 text-green-700 bg-green-50/50 hover:bg-green-100/50'
-                        }`}
-                      title={tpl.isActive ? 'Hide Template' : 'Publish Template'}
-                    >
-                      {tpl.isActive ? 'Draft' : 'Publish'}
-                    </button>
-                    <button
-                      onClick={() => handleDuplicate(tpl.id)}
-                      className="py-2 rounded-xl text-[10px] font-bold border border-wedding-pink-medium/30 text-wedding-charcoal-light hover:bg-wedding-pink-light/35 flex items-center justify-center gap-1"
-                      title="Duplicate Template"
-                    >
-                      <Copy className="w-3.5 h-3.5" /> Clone
-                    </button>
-                    <button
-                      onClick={() => handleDelete(tpl.id)}
-                      className="py-2 rounded-xl text-[10px] font-bold border border-transparent text-red-500 hover:text-red-700 hover:bg-red-50 flex items-center justify-center gap-1"
-                      title="Delete Template"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Delete
-                    </button>
+                    {(currentUser?.role === 'super_admin' || currentUser?.role === 'content_manager' || !currentUser) && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openEditModal(tpl)}
+                          className="p-2 text-wedding-charcoal-light hover:text-wedding-pink-dark hover:bg-wedding-pink-light/50 rounded-lg transition-colors border border-wedding-pink-medium/10 animate-scaleIn"
+                          title="Edit Template Details"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleToggleState(tpl.id, tpl.isActive)}
+                          className={`p-2 rounded-lg border transition-all duration-200 ${tpl.isActive
+                            ? 'border-amber-200 text-amber-600 bg-amber-50/50 hover:bg-amber-100/50'
+                            : 'border-green-200 text-green-600 bg-green-50/50 hover:bg-green-100/50'
+                            }`}
+                          title={tpl.isActive ? 'Revert to Draft' : 'Publish to Live'}
+                        >
+                          {tpl.isActive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                        <button
+                          onClick={() => handleDuplicate(tpl.id)}
+                          className="p-2 text-wedding-charcoal-light hover:text-wedding-pink-dark hover:bg-wedding-pink-light/50 rounded-lg transition-colors border border-wedding-pink-medium/10 animate-scaleIn"
+                          title="Clone Template"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(tpl.id)}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                          title="Delete Template"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2078,8 +2078,8 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                         key={f.id}
                         onClick={() => handleFontSelect(f.family)}
                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${isChecked
-                            ? 'bg-wedding-pink-light border-wedding-pink-dark text-wedding-pink-dark'
-                            : 'border-wedding-pink-medium/35 text-wedding-charcoal-light hover:bg-wedding-pink-light/10'
+                          ? 'bg-wedding-pink-light border-wedding-pink-dark text-wedding-pink-dark'
+                          : 'border-wedding-pink-medium/35 text-wedding-charcoal-light hover:bg-wedding-pink-light/10'
                           }`}
                       >
                         {f.family}
@@ -2101,8 +2101,8 @@ export default function TemplatesList({ onOpenEditor }: TemplatesListProps) {
                         key={l.id}
                         onClick={() => handleLangSelect(l.name)}
                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${isChecked
-                            ? 'bg-wedding-pink-light border-wedding-pink-dark text-wedding-pink-dark'
-                            : 'border-wedding-pink-medium/35 text-wedding-charcoal-light hover:bg-wedding-pink-light/10'
+                          ? 'bg-wedding-pink-light border-wedding-pink-dark text-wedding-pink-dark'
+                          : 'border-wedding-pink-medium/35 text-wedding-charcoal-light hover:bg-wedding-pink-light/10'
                           }`}
                       >
                         {l.name}

@@ -1761,15 +1761,33 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
   };
 
   const handleToggleState = async (id: string, activeState: boolean) => {
+    // Optimistically update templates state immediately
+    setTemplates(prev =>
+      prev.map(tpl => (tpl.id === id ? { ...tpl, isActive: !activeState } : tpl))
+    );
+
     try {
-      await fetch(`${API_URL}/api/templates/${id}`, {
+      const res = await fetch(`${API_URL}/api/templates/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !activeState })
       });
-      fetchInitialData();
+
+      if (!res.ok) {
+        // Rollback state if the update failed on the server
+        setTemplates(prev =>
+          prev.map(tpl => (tpl.id === id ? { ...tpl, isActive: activeState } : tpl))
+        );
+        const err = await res.json();
+        alert(err.error || 'Failed to toggle status.');
+      }
     } catch (error) {
       console.error('Toggle template state error:', error);
+      // Rollback state on network error
+      setTemplates(prev =>
+        prev.map(tpl => (tpl.id === id ? { ...tpl, isActive: activeState } : tpl))
+      );
+      alert('Network error. Failed to toggle status.');
     }
   };
 

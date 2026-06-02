@@ -99,17 +99,34 @@ export default function Fonts() {
   };
 
   const handleToggle = async (id: string, activeState: boolean) => {
+    // Optimistically update fonts state immediately
+    setFonts(prev =>
+      prev.map(f => (f.id === id ? { ...f, isActive: !activeState } : f))
+    );
+
     try {
       const res = await fetch(`${API_URL}/api/fonts/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !activeState })
       });
-      if (res.ok) {
+      if (!res.ok) {
+        // Rollback state if the update failed on the server
+        setFonts(prev =>
+          prev.map(f => (f.id === id ? { ...f, isActive: activeState } : f))
+        );
+        const err = await res.json();
+        alert(err.error || 'Failed to toggle status.');
+      } else {
         fetchFonts();
       }
     } catch (error) {
       console.error('Toggle font status error:', error);
+      // Rollback state on network error
+      setFonts(prev =>
+        prev.map(f => (f.id === id ? { ...f, isActive: activeState } : f))
+      );
+      alert('Network error. Failed to toggle status.');
     }
   };
 

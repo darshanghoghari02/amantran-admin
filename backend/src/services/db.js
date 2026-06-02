@@ -642,7 +642,7 @@ class DatabaseService {
         await this.db.collection(collectionName).doc(id).update(dataWithUpdate);
         const updatedDoc = await this.db.collection(collectionName).doc(id).get();
         const finalData = { id: updatedDoc.id, ...updatedDoc.data() };
-        if (collectionName === 'templates') {
+        if (collectionName === 'templates' && updates.pages !== undefined) {
           await this.syncTemplateFirestore(id, finalData);
         }
         return finalData;

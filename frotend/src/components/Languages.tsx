@@ -59,17 +59,34 @@ export default function Languages() {
   };
 
   const handleToggle = async (id: string, activeState: boolean) => {
+    // Optimistically update languages state immediately
+    setLanguages(prev =>
+      prev.map(lang => (lang.id === id ? { ...lang, isActive: !activeState } : lang))
+    );
+
     try {
       const res = await fetch(`${API_URL}/api/languages/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !activeState })
       });
-      if (res.ok) {
+      if (!res.ok) {
+        // Rollback state if the update failed on the server
+        setLanguages(prev =>
+          prev.map(lang => (lang.id === id ? { ...lang, isActive: activeState } : lang))
+        );
+        const err = await res.json();
+        alert(err.error || 'Failed to toggle status.');
+      } else {
         fetchLanguages();
       }
     } catch (error) {
       console.error('Toggle language status error:', error);
+      // Rollback state on network error
+      setLanguages(prev =>
+        prev.map(lang => (lang.id === id ? { ...lang, isActive: activeState } : lang))
+      );
+      alert('Network error. Failed to toggle status.');
     }
   };
 

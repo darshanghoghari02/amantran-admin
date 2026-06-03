@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Template, TemplatePage, CanvasElement } from '../types';
+import { API_URL } from '../config';
 
 const COMMON_WEDDING_TRANSLATIONS: Record<string, Record<string, string>> = {
   "wedding invitation": {
@@ -1595,6 +1596,51 @@ interface CanvasState {
   clearHistory: () => void;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   DEBOUNCED AUTO-SAVE
+   Fires 2 seconds after the last canvas mutation.
+   Updates autosaveStatus so the header badge reflects live state.
+═══════════════════════════════════════════════════════════ */
+let _autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function triggerAutoSave(getState: () => CanvasState, setState: (partial: Partial<CanvasState>) => void) {
+  if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
+
+  // Show 'saving...' badge immediately to give instant feedback
+  setState({ autosaveStatus: 'saving' });
+
+  _autoSaveTimer = setTimeout(async () => {
+    const { template } = getState();
+    if (!template || !template.id) {
+      setState({ autosaveStatus: 'idle' });
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/templates/${template.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(template),
+      });
+
+      if (res.ok) {
+        setState({ autosaveStatus: 'saved' });
+        // Reset back to idle after 2.5 seconds
+        setTimeout(() => {
+          const curr = getState();
+          if (curr.autosaveStatus === 'saved') setState({ autosaveStatus: 'idle' });
+        }, 2500);
+      } else {
+        console.error('[AutoSave] Server responded with error:', res.status);
+        setState({ autosaveStatus: 'error' });
+      }
+    } catch (err) {
+      console.error('[AutoSave] Network error:', err);
+      setState({ autosaveStatus: 'error' });
+    }
+  }, 2000); // 2-second debounce
+}
+
 export const useCanvasStore = create<CanvasState>((set, get) => ({
   template: null,
   selectedPageIndex: 0,
@@ -1719,6 +1765,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       template: { ...template, pages },
       selectedElementId: newElement.id
     });
+    triggerAutoSave(get, (p) => set(p as Partial<CanvasState>));
   },
 
   updateElement: (id, updates) => {
@@ -1777,6 +1824,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     });
 
     set({ template: { ...template, pages } });
+    triggerAutoSave(get, (p) => set(p as Partial<CanvasState>));
   },
 
   deleteElement: (id) => {
@@ -1795,6 +1843,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       template: { ...template, pages },
       selectedElementId: null
     });
+    triggerAutoSave(get, (p) => set(p as Partial<CanvasState>));
   },
 
   duplicateElement: (id) => {
@@ -1827,6 +1876,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       template: { ...template, pages },
       selectedElementId: clone.id
     });
+    triggerAutoSave(get, (p) => set(p as Partial<CanvasState>));
   },
 
   bringToFront: (id) => {
@@ -1850,6 +1900,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     });
 
     set({ template: { ...template, pages } });
+    triggerAutoSave(get, (p) => set(p as Partial<CanvasState>));
   },
 
   sendToBack: (id) => {
@@ -1873,6 +1924,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     });
 
     set({ template: { ...template, pages } });
+    triggerAutoSave(get, (p) => set(p as Partial<CanvasState>));
   },
 
   toggleLock: (id) => {
@@ -1893,6 +1945,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     });
 
     set({ template: { ...template, pages } });
+    triggerAutoSave(get, (p) => set(p as Partial<CanvasState>));
   },
 
   addPage: (name) => {
@@ -1913,6 +1966,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       template: { ...template, pages: [...pages, newPage] },
       selectedPageIndex: pages.length
     });
+    triggerAutoSave(get, (p) => set(p as Partial<CanvasState>));
   },
 
   deletePage: (index) => {
@@ -1928,6 +1982,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       selectedPageIndex: Math.max(0, index - 1),
       selectedElementId: null
     });
+    triggerAutoSave(get, (p) => set(p as Partial<CanvasState>));
   },
 
   duplicatePage: (index) => {
@@ -1960,6 +2015,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       selectedPageIndex: index + 1,
       selectedElementId: null
     });
+    triggerAutoSave(get, (p) => set(p as Partial<CanvasState>));
   },
 
   updatePageBackground: (imageUrl) => {
@@ -1988,6 +2044,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         localAssetPaths
       }
     });
+    triggerAutoSave(get, (p) => set(p as Partial<CanvasState>));
   },
 
   reorderPages: (pages) => {
@@ -1999,6 +2056,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     set({
       template: { ...template, pages }
     });
+    triggerAutoSave(get, (p) => set(p as Partial<CanvasState>));
   },
 
   updateTemplatePages: (pages) => {
@@ -2010,5 +2068,6 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     set({
       template: { ...template, pages }
     });
+    triggerAutoSave(get, (p) => set(p as Partial<CanvasState>));
   }
 }));

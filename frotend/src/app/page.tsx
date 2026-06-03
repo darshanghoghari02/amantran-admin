@@ -24,7 +24,7 @@ export default function RootPage() {
   const [isFirebase, setIsFirebase] = useState(false);
   const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
+
   // Auth Form State
   const [email, setEmail] = useState('admin@amantran.com');
   const [password, setPassword] = useState('admin123');
@@ -44,7 +44,7 @@ export default function RootPage() {
         const data = await res.json();
         setBackendStatus('online');
         setIsFirebase(data.mode === 'firebase' || data.mode === 'dual-mode' || data.isFirebase === true);
-        
+
         // If successfully online, check less frequently (every 30 seconds)
         if (data.status === 'online') {
           clearInterval(intervalId);
@@ -59,7 +59,7 @@ export default function RootPage() {
     }
 
     checkBackend();
-    
+
     // Check every 6 seconds until backend is online
     intervalId = setInterval(checkBackend, 6000);
 
@@ -75,7 +75,7 @@ export default function RootPage() {
         const fonts = await res.json();
         if (Array.isArray(fonts)) {
           const activeFonts = fonts.filter((f) => f.isActive);
-          
+
           let styleContent = '';
           activeFonts.forEach((f) => {
             const cleanPath = f.localPath.startsWith('/') ? f.localPath : `/${f.localPath}`;
@@ -108,7 +108,7 @@ export default function RootPage() {
         console.error('Failed to dynamically load custom fonts:', err);
       }
     }
-    
+
     loadCustomFonts();
   }, [backendStatus, currentTab]);
 
@@ -201,7 +201,7 @@ export default function RootPage() {
 
         {/* Central white auth card */}
         <div className="w-full max-w-md bg-white p-8 sm:p-10 rounded-[36px] shadow-[0_20px_60px_-15px_rgba(255,62,92,0.14)] space-y-6 z-10 border border-wedding-pink-medium/10 animate-slideUp">
-          
+
           {/* Logo Heading */}
           <div className="flex flex-col items-center text-center space-y-3">
             <div className="w-16 h-16 rounded-[22px] bg-[#FF3E5C] flex items-center justify-center shadow-lg shadow-wedding-pink-dark/20 transition-transform duration-300 hover:scale-105">
@@ -235,8 +235,8 @@ export default function RootPage() {
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Administrator Email</label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-wedding-pink-dark absolute left-4 top-1/2 transform -translate-y-1/2" />
-                <input 
-                  type="email" 
+                <input
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@amantran.com"
@@ -250,8 +250,8 @@ export default function RootPage() {
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Security Password</label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-wedding-pink-dark absolute left-4 top-1/2 transform -translate-y-1/2" />
-                <input 
-                  type={showPassword ? "text" : "password"} 
+                <input
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -306,19 +306,19 @@ export default function RootPage() {
   const hasAccessToTab = (tab: string, role: string | undefined): boolean => {
     if (!role) return false;
     if (role === 'super_admin') return true;
-    
+
     if (role === 'content_manager') {
       return tab !== 'users' && tab !== 'subscriptions';
     }
-    
+
     if (role === 'editor') {
       return tab === 'dashboard' || tab === 'templates' || tab === 'editor';
     }
-    
+
     if (role === 'user') {
       return tab === 'dashboard' || tab === 'templates';
     }
-    
+
     return false;
   };
 
@@ -326,9 +326,9 @@ export default function RootPage() {
   return (
     <div className="flex h-screen overflow-hidden bg-wedding-bg relative">
       {/* Dynamic Navigation Left Sidebar */}
-      <Sidebar 
-        currentTab={currentTab} 
-        setCurrentTab={setCurrentTab} 
+      <Sidebar
+        currentTab={currentTab}
+        setCurrentTab={setCurrentTab}
         currentUser={currentUser || undefined}
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
@@ -341,7 +341,7 @@ export default function RootPage() {
 
       {/* Sidebar mobile dark overlay backdrop */}
       {isSidebarOpen && (
-        <div 
+        <div
           onClick={() => setIsSidebarOpen(false)}
           className="fixed inset-0 bg-wedding-charcoal-dark/50 backdrop-blur-xs z-40 md:hidden animate-fadeIn transition-opacity duration-300"
         />
@@ -350,11 +350,11 @@ export default function RootPage() {
       {/* Central content screen wrapper */}
       <div className="flex-1 flex flex-col overflow-hidden w-full">
         {/* Dynamic header Topbar */}
-        <Topbar 
-          currentTab={currentTab} 
-          isFirebase={isFirebase} 
-          backendStatus={backendStatus} 
-          apiUrl={API_URL} 
+        <Topbar
+          currentTab={currentTab}
+          isFirebase={isFirebase}
+          backendStatus={backendStatus}
+          apiUrl={API_URL}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
@@ -369,12 +369,12 @@ export default function RootPage() {
           )}
 
           {currentTab === 'templates' && hasAccessToTab('templates', currentUser?.role) && (
-            <TemplatesList 
+            <TemplatesList
               currentUser={currentUser || undefined}
               onOpenEditor={(tpl) => {
                 setTemplate(tpl);
                 setCurrentTab('editor');
-              }} 
+              }}
             />
           )}
 
@@ -402,8 +402,8 @@ export default function RootPage() {
               <p className="text-sm text-gray-500 max-w-sm">
                 Your active role ({currentUser.role.toUpperCase()}) does not possess the administrative privileges required to access this system module.
               </p>
-              <button 
-                onClick={() => setCurrentTab('dashboard')} 
+              <button
+                onClick={() => setCurrentTab('dashboard')}
                 className="mt-2 px-5 py-2.5 bg-wedding-charcoal-dark hover:bg-wedding-charcoal-light text-wedding-gold-light hover:text-white text-xs font-bold rounded-xl transition-all shadow"
               >
                 Return to Dashboard

@@ -49,7 +49,8 @@ export default function EditorWorkspace({ onClose }: EditorWorkspaceProps) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isTranslatingPage, setIsTranslatingPage] = useState(false);
 
-  // Autosave disabled at admin request - manual save only
+  // Auto-save is active — changes persist to DB automatically with a 2-second debounce.
+  // Manual "Save Draft" is still available for explicit saves.
 
   // Keyboard Shortcuts listener
   useEffect(() => {
@@ -234,7 +235,7 @@ export default function EditorWorkspace({ onClose }: EditorWorkspaceProps) {
         return (
           <span className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold rounded-lg uppercase shadow-sm">
             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-            Saving...
+            Auto-Saving...
           </span>
         );
       case 'saved':
@@ -253,7 +254,7 @@ export default function EditorWorkspace({ onClose }: EditorWorkspaceProps) {
       default:
         return (
           <span className="flex items-center gap-1.5 px-3 py-1 bg-wedding-charcoal-light border border-white/10 text-gray-300 text-xs font-bold rounded-lg uppercase shadow-sm">
-            ● Manual Save Mode
+            ⚡ Auto-Save Active
           </span>
         );
     }

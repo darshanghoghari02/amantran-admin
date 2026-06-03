@@ -23,6 +23,26 @@ interface PreviewModalProps {
   onClose: () => void;
 }
 
+/* Helper to render punctuation and English digits with a clean sans-serif font when a legacy font (like KAP series) is active */
+function renderFormattedText(text: string, fontFamily: string) {
+  const isLegacyFont = fontFamily.toLowerCase().startsWith('kap');
+  if (!isLegacyFont) return text;
+
+  const parts = text.split(/([.,\/:\-()&?!"'()[\]{}<>0-9]+)/g);
+
+  return parts.map((part, idx) => {
+    const isSpecial = /^[.,\/:\-()&?!"'()[\]{}<>0-9]+$/.test(part);
+    if (isSpecial) {
+      return (
+        <span key={idx} style={{ fontFamily: 'sans-serif' }}>
+          {part}
+        </span>
+      );
+    }
+    return part;
+  });
+}
+
 export default function PreviewModal({ 
   template, 
   selectedLanguage, 
@@ -240,7 +260,7 @@ export default function PreviewModal({
                                 left: `${elem.x * mobileScale}px`,
                                 top: `${elem.y * mobileScale}px`,
                                 width: `${elem.width * mobileScale}px`,
-                                height: `${elem.height * mobileScale}px`,
+                                height: elem.type === 'text' ? 'auto' : `${elem.height * mobileScale}px`,
                                 transform: `rotate(${elem.rotation}deg)`,
                                 opacity: elem.opacity,
                                 zIndex: elem.zIndex,
@@ -248,23 +268,28 @@ export default function PreviewModal({
                               className="flex items-center justify-center origin-center select-none"
                             >
                               {elem.type === 'text' ? (
-                                <div
-                                  style={{
-                                    fontFamily: elem.languageStyles?.[selectedLanguage]?.fontFamily || elem.fontFamily || 'Rasa',
-                                    fontSize: `${(elem.languageStyles?.[selectedLanguage]?.fontSize || elem.fontSize || 36) * mobileScale}px`,
-                                    color: elem.languageStyles?.[selectedLanguage]?.color || elem.color || '#4A2E35',
-                                    lineHeight: elem.languageStyles?.[selectedLanguage]?.lineHeight || elem.lineHeight || 1.2,
-                                    textAlign: elem.languageStyles?.[selectedLanguage]?.alignment || elem.alignment || 'center',
-                                    fontWeight: elem.languageStyles?.[selectedLanguage]?.fontWeight || elem.fontWeight || 'normal',
-                                    letterSpacing: elem.languageStyles?.[selectedLanguage]?.letterSpacing !== undefined
-                                      ? `${elem.languageStyles[selectedLanguage].letterSpacing * mobileScale}px`
-                                      : (elem.letterSpacing ? `${elem.letterSpacing * mobileScale}px` : undefined),
-                                    textShadow: elem.languageStyles?.[selectedLanguage]?.textShadow || elem.textShadow || undefined,
-                                  }}
-                                  className="w-full h-full break-words whitespace-pre-wrap flex items-center justify-center font-medium leading-none select-none"
-                                >
-                                  {elementText}
-                                </div>
+                                (() => {
+                                  const fontFamily = elem.languageStyles?.[selectedLanguage]?.fontFamily || elem.fontFamily || 'Rasa';
+                                  return (
+                                    <div
+                                      style={{
+                                        fontFamily: fontFamily,
+                                        fontSize: `${(elem.languageStyles?.[selectedLanguage]?.fontSize || elem.fontSize || 36) * mobileScale}px`,
+                                        color: elem.languageStyles?.[selectedLanguage]?.color || elem.color || '#4A2E35',
+                                        lineHeight: elem.languageStyles?.[selectedLanguage]?.lineHeight || elem.lineHeight || 1.2,
+                                        textAlign: elem.languageStyles?.[selectedLanguage]?.alignment || elem.alignment || 'center',
+                                        fontWeight: elem.languageStyles?.[selectedLanguage]?.fontWeight || elem.fontWeight || 'normal',
+                                        letterSpacing: elem.languageStyles?.[selectedLanguage]?.letterSpacing !== undefined
+                                          ? `${elem.languageStyles[selectedLanguage].letterSpacing * mobileScale}px`
+                                          : (elem.letterSpacing ? `${elem.letterSpacing * mobileScale}px` : undefined),
+                                        textShadow: elem.languageStyles?.[selectedLanguage]?.textShadow || elem.textShadow || undefined,
+                                      }}
+                                      className="w-full h-full break-words whitespace-pre-wrap flex items-center justify-center font-medium leading-none select-none"
+                                    >
+                                      {renderFormattedText(elementText, fontFamily)}
+                                    </div>
+                                  );
+                                })()
                               ) : (
                                 <img 
                                   src={getImageUrl(elem.imagePath)} 
@@ -376,7 +401,7 @@ export default function PreviewModal({
                             left: `${elem.x * desktopScale}px`,
                             top: `${elem.y * desktopScale}px`,
                             width: `${elem.width * desktopScale}px`,
-                            height: `${elem.height * desktopScale}px`,
+                            height: elem.type === 'text' ? 'auto' : `${elem.height * desktopScale}px`,
                             transform: `rotate(${elem.rotation}deg)`,
                             opacity: elem.opacity,
                             zIndex: elem.zIndex,
@@ -384,23 +409,28 @@ export default function PreviewModal({
                           className="flex items-center justify-center origin-center select-none"
                         >
                           {elem.type === 'text' ? (
-                            <div
-                              style={{
-                                fontFamily: elem.languageStyles?.[selectedLanguage]?.fontFamily || elem.fontFamily || 'Rasa',
-                                fontSize: `${(elem.languageStyles?.[selectedLanguage]?.fontSize || elem.fontSize || 36) * desktopScale}px`,
-                                color: elem.languageStyles?.[selectedLanguage]?.color || elem.color || '#4A2E35',
-                                lineHeight: elem.languageStyles?.[selectedLanguage]?.lineHeight || elem.lineHeight || 1.2,
-                                textAlign: elem.languageStyles?.[selectedLanguage]?.alignment || elem.alignment || 'center',
-                                fontWeight: elem.languageStyles?.[selectedLanguage]?.fontWeight || elem.fontWeight || 'normal',
-                                letterSpacing: elem.languageStyles?.[selectedLanguage]?.letterSpacing !== undefined
-                                  ? `${elem.languageStyles[selectedLanguage].letterSpacing * desktopScale}px`
-                                  : (elem.letterSpacing ? `${elem.letterSpacing * desktopScale}px` : undefined),
-                                textShadow: elem.languageStyles?.[selectedLanguage]?.textShadow || elem.textShadow || undefined,
-                              }}
-                              className="w-full h-full break-words whitespace-pre-wrap flex items-center justify-center font-medium leading-none select-none"
-                            >
-                              {elementText}
-                            </div>
+                            (() => {
+                              const fontFamily = elem.languageStyles?.[selectedLanguage]?.fontFamily || elem.fontFamily || 'Rasa';
+                              return (
+                                <div
+                                  style={{
+                                    fontFamily: fontFamily,
+                                    fontSize: `${(elem.languageStyles?.[selectedLanguage]?.fontSize || elem.fontSize || 36) * desktopScale}px`,
+                                    color: elem.languageStyles?.[selectedLanguage]?.color || elem.color || '#4A2E35',
+                                    lineHeight: elem.languageStyles?.[selectedLanguage]?.lineHeight || elem.lineHeight || 1.2,
+                                    textAlign: elem.languageStyles?.[selectedLanguage]?.alignment || elem.alignment || 'center',
+                                    fontWeight: elem.languageStyles?.[selectedLanguage]?.fontWeight || elem.fontWeight || 'normal',
+                                    letterSpacing: elem.languageStyles?.[selectedLanguage]?.letterSpacing !== undefined
+                                      ? `${elem.languageStyles[selectedLanguage].letterSpacing * desktopScale}px`
+                                      : (elem.letterSpacing ? `${elem.letterSpacing * desktopScale}px` : undefined),
+                                    textShadow: elem.languageStyles?.[selectedLanguage]?.textShadow || elem.textShadow || undefined,
+                                  }}
+                                  className="w-full h-full break-words whitespace-pre-wrap flex items-center justify-center font-medium leading-none select-none"
+                                >
+                                  {renderFormattedText(elementText, fontFamily)}
+                                </div>
+                              );
+                            })()
                           ) : (
                             <img 
                               src={getImageUrl(elem.imagePath)} 

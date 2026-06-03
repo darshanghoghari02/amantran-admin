@@ -2,7 +2,7 @@
 
 import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
-import { Heart, Lock, Mail, Server } from 'lucide-react';
+import { Heart, Lock, Mail, Server, LogIn, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import Dashboard from '../components/Dashboard';
@@ -11,6 +11,7 @@ import TemplatesList from '../components/TemplatesList';
 import Fonts from '../components/Fonts';
 import Languages from '../components/Languages';
 import Users from '../components/Users';
+import Subscriptions from '../components/Subscriptions';
 import EditorWorkspace from '../components/editor/EditorWorkspace';
 import { useCanvasStore } from '../store/canvasStore';
 import { User } from '../types';
@@ -29,6 +30,7 @@ export default function RootPage() {
   const [password, setPassword] = useState('admin123');
   const [authError, setAuthError] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { setTemplate } = useCanvasStore();
 
@@ -158,77 +160,133 @@ export default function RootPage() {
   // Login view layout
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-gradient-to-tr from-wedding-pink-light via-wedding-bg to-[#ffe4e8] flex items-center justify-center p-4 relative overflow-hidden">
-        {/* Floating decorative elements */}
-        <div className="absolute top-10 left-10 w-48 h-48 bg-wedding-pink-medium/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-10 right-10 w-72 h-72 bg-wedding-gold-light/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="min-h-screen bg-[#FFF0F2] flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Floating concentric design circles */}
+        <div className="absolute top-[-10%] left-[-10%] w-[45%] aspect-square rounded-full border border-[#FFCAD2]/30 pointer-events-none z-0"></div>
+        <div className="absolute top-[-5%] left-[-5%] w-[33%] aspect-square rounded-full border border-[#FFCAD2]/45 pointer-events-none z-0"></div>
+        <div className="absolute top-[0%] left-[0%] w-[22%] aspect-square rounded-full border border-[#FFCAD2]/55 pointer-events-none z-0"></div>
 
-        <div className="w-full max-w-md bg-white/70 backdrop-blur-md border border-wedding-pink-medium/40 p-8 rounded-3xl shadow-2xl space-y-8 z-10 animate-slideUp">
+        {/* Concentric rings at the bottom right */}
+        <div className="absolute bottom-[-15%] right-[-15%] w-[50%] aspect-square rounded-full border border-[#FFCAD2]/25 pointer-events-none z-0"></div>
+        <div className="absolute bottom-[-8%] right-[-8%] w-[35%] aspect-square rounded-full border border-[#FFCAD2]/35 pointer-events-none z-0"></div>
+
+        {/* Layered wave curves at the bottom */}
+        <div className="absolute bottom-0 left-0 right-0 w-full overflow-hidden leading-none z-0 pointer-events-none">
+          <svg className="relative block w-full h-[150px] md:h-[220px]" viewBox="0 0 1200 120" preserveAspectRatio="none">
+            <path d="M0,0 C150,90 350,120 600,80 C850,40 1050,100 1200,20 L1200,120 L0,120 Z" fill="#FFAEC0" opacity="0.3"></path>
+            <path d="M0,40 C180,100 320,40 600,90 C880,140 1020,30 1200,60 L1200,120 L0,120 Z" fill="#FF7FA0" opacity="0.4"></path>
+            <path d="M0,70 C200,110 400,60 700,100 C1000,140 1100,80 1200,100 L1200,120 L0,120 Z" fill="#FF3E5C" opacity="0.65"></path>
+          </svg>
+        </div>
+
+        {/* Dotted grid layouts */}
+        <div className="absolute top-[20%] right-[10%] opacity-20 hidden md:block z-0 pointer-events-none">
+          <div className="grid grid-cols-6 gap-3">
+            {Array.from({ length: 30 }).map((_, i) => (
+              <div key={i} className="w-1.5 h-1.5 rounded-full bg-wedding-pink-dark"></div>
+            ))}
+          </div>
+        </div>
+        <div className="absolute bottom-[20%] left-[5%] opacity-20 hidden md:block z-0 pointer-events-none">
+          <div className="grid grid-cols-6 gap-3">
+            {Array.from({ length: 30 }).map((_, i) => (
+              <div key={i} className="w-1.5 h-1.5 rounded-full bg-wedding-pink-dark"></div>
+            ))}
+          </div>
+        </div>
+
+        {/* Small floating outline rings */}
+        <div className="absolute top-[25%] left-[20%] w-5 h-5 rounded-full border-[2.5px] border-[#FF3E5C]/35 z-0"></div>
+        <div className="absolute top-[20%] right-[25%] w-6 h-6 rounded-full border-[2.5px] border-[#FF3E5C]/35 z-0"></div>
+
+        {/* Central white auth card */}
+        <div className="w-full max-w-md bg-white p-8 sm:p-10 rounded-[36px] shadow-[0_20px_60px_-15px_rgba(255,62,92,0.14)] space-y-6 z-10 border border-wedding-pink-medium/10 animate-slideUp">
           
           {/* Logo Heading */}
           <div className="flex flex-col items-center text-center space-y-3">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-wedding-pink-dark to-wedding-pink-medium flex items-center justify-center shadow-lg shadow-wedding-pink-medium/40">
-              <Heart className="w-6 h-6 text-white fill-white animate-pulse" />
+            <div className="w-16 h-16 rounded-[22px] bg-[#FF3E5C] flex items-center justify-center shadow-lg shadow-wedding-pink-dark/20 transition-transform duration-300 hover:scale-105">
+              <Heart className="w-8 h-8 text-white fill-white" />
             </div>
             <div>
               <h1 className="font-extrabold text-2xl tracking-wide text-wedding-charcoal-dark font-sans uppercase">
-                Amantran Admin
+                AMANTRAN <span className="text-wedding-pink-dark">ADMIN</span>
               </h1>
-              <p className="text-xs text-wedding-pink-dark font-semibold mt-1">
+              <p className="text-xs text-gray-500 font-semibold mt-1">
                 Professional Invitation CMS Portal
               </p>
             </div>
           </div>
 
+          {/* Separation divider with heart icon */}
+          <div className="flex items-center justify-center gap-3 py-1">
+            <div className="h-[1px] w-20 bg-gradient-to-r from-transparent to-wedding-pink-medium/40"></div>
+            <Heart className="w-3 h-3 text-[#FF3E5C] fill-[#FF3E5C]" />
+            <div className="h-[1px] w-20 bg-gradient-to-l from-transparent to-wedding-pink-medium/40"></div>
+          </div>
+
           <form onSubmit={handleLoginSubmit} className="space-y-5">
             {authError && (
-              <div className="p-3.5 bg-red-50 text-red-700 text-xs font-semibold rounded-2xl border border-red-200">
+              <div className="p-3.5 bg-red-50 text-red-600 text-xs font-semibold rounded-2xl border border-red-200">
                 ✕ {authError}
               </div>
             )}
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-wedding-charcoal-light uppercase tracking-wider block">Administrator Email</label>
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Administrator Email</label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
+                <Mail className="w-4 h-4 text-wedding-pink-dark absolute left-4 top-1/2 transform -translate-y-1/2" />
                 <input 
                   type="email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@amantran.com"
-                  className="w-full pl-12 pr-4 py-3 bg-white border border-wedding-pink-medium/40 rounded-2xl text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 font-medium"
+                  className="w-full pl-12 pr-4 py-3 bg-[#FFF5F6] border border-[#FFCAD2] rounded-2xl text-wedding-charcoal-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/30 focus:bg-white text-sm font-semibold transition-all"
                   required
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-wedding-charcoal-light uppercase tracking-wider block">Security Password</label>
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Security Password</label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
+                <Lock className="w-4 h-4 text-wedding-pink-dark absolute left-4 top-1/2 transform -translate-y-1/2" />
                 <input 
-                  type="password" 
+                  type={showPassword ? "text" : "password"} 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-4 py-3 bg-white border border-wedding-pink-medium/40 rounded-2xl text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 font-medium"
+                  className="w-full pl-12 pr-12 py-3 bg-[#FFF5F6] border border-[#FFCAD2] rounded-2xl text-wedding-charcoal-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/30 focus:bg-white text-sm font-semibold transition-all"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
             <button
               type="submit"
               disabled={loggingIn}
-              className="w-full py-3.5 bg-wedding-charcoal-dark hover:bg-wedding-charcoal-light text-wedding-gold-light hover:text-white font-bold text-sm rounded-2xl shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-60"
+              className="w-full py-3.5 bg-gradient-to-r from-[#FF3E5C] to-[#FF6B81] hover:from-[#E62E47] hover:to-[#FF526E] text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-wedding-pink-dark/20 transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-60 flex items-center justify-center gap-2"
             >
+              <LogIn className="w-4 h-4 text-white" />
               {loggingIn ? 'Authenticating...' : 'Sign In to Dashboard'}
             </button>
           </form>
 
           {/* Dev credentials tip */}
-          <div className="text-center pt-2 border-t border-wedding-pink-medium/20 text-[10px] text-gray-500 font-semibold leading-relaxed">
-            💡 Local Developer Credentials: <code className="bg-wedding-pink-light/60 px-1 py-0.5 text-wedding-pink-dark rounded font-mono">admin@amantran.com</code> / <code className="bg-wedding-pink-light/60 px-1 py-0.5 text-wedding-pink-dark rounded font-mono">admin123</code>
+          <div className="flex items-center justify-center gap-1.5 pt-4 border-t border-wedding-pink-medium/20 text-[10px] text-gray-500 font-semibold leading-relaxed">
+            <span className="flex items-center gap-1 text-green-600">
+              <span className="p-0.5 bg-green-50 rounded border border-green-200"><ShieldCheck className="w-3 h-3" /></span>
+              Local Developer Credentials:
+            </span>
+            <code className="text-wedding-pink-dark font-bold font-mono">admin@amantran.com</code>
+            <span>|</span>
+            <code className="text-wedding-pink-dark font-bold font-mono">admin123</code>
           </div>
         </div>
       </div>
@@ -250,7 +308,7 @@ export default function RootPage() {
     if (role === 'super_admin') return true;
     
     if (role === 'content_manager') {
-      return tab !== 'users';
+      return tab !== 'users' && tab !== 'subscriptions';
     }
     
     if (role === 'editor') {
@@ -330,6 +388,10 @@ export default function RootPage() {
 
           {currentTab === 'users' && hasAccessToTab('users', currentUser?.role) && (
             <Users />
+          )}
+
+          {currentTab === 'subscriptions' && hasAccessToTab('subscriptions', currentUser?.role) && (
+            <Subscriptions />
           )}
 
           {/* Access Denied Warning Redirect */}

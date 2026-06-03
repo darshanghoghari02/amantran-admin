@@ -2,6 +2,7 @@ import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Trash2, CheckCircle2, XCircle, Upload, Type } from 'lucide-react';
 import { CustomFont } from '../types';
+import { useToastStore } from '../store/toastStore';
 
 export default function Fonts() {
   const [fonts, setFonts] = useState<CustomFont[]>([]);
@@ -55,12 +56,13 @@ export default function Fonts() {
             .replace(/[-_]/g, ' ');   // replace dashes with spaces
           setFamily(cleanName);
         }
+        useToastStore.getState().addToast('Font binary uploaded successfully!', 'success');
       } else {
-        alert(data.error || 'Upload failed');
+        useToastStore.getState().addToast(data.error || 'Upload failed', 'error');
       }
     } catch (err) {
       console.error('Upload error:', err);
-      alert('Failed to upload font file.');
+      useToastStore.getState().addToast('Failed to upload font file.', 'error');
     } finally {
       setUploading(false);
     }
@@ -89,12 +91,14 @@ export default function Fonts() {
       if (res.ok) {
         setIsModalOpen(false);
         fetchFonts();
+        useToastStore.getState().addToast('Font registered successfully!', 'success');
       } else {
         const err = await res.json();
-        alert(err.error || 'Save failed');
+        useToastStore.getState().addToast(err.error || 'Save failed', 'error');
       }
     } catch (error) {
       console.error('Submit font error:', error);
+      useToastStore.getState().addToast('Failed to register font due to a network error.', 'error');
     }
   };
 
@@ -116,9 +120,10 @@ export default function Fonts() {
           prev.map(f => (f.id === id ? { ...f, isActive: activeState } : f))
         );
         const err = await res.json();
-        alert(err.error || 'Failed to toggle status.');
+        useToastStore.getState().addToast(err.error || 'Failed to toggle status.', 'error');
       } else {
         fetchFonts();
+        useToastStore.getState().addToast('Font status updated successfully!', 'success');
       }
     } catch (error) {
       console.error('Toggle font status error:', error);
@@ -126,7 +131,7 @@ export default function Fonts() {
       setFonts(prev =>
         prev.map(f => (f.id === id ? { ...f, isActive: activeState } : f))
       );
-      alert('Network error. Failed to toggle status.');
+      useToastStore.getState().addToast('Network error. Failed to toggle status.', 'error');
     }
   };
 
@@ -139,9 +144,14 @@ export default function Fonts() {
       });
       if (res.ok) {
         fetchFonts();
+        useToastStore.getState().addToast('Font deleted successfully!', 'success');
+      } else {
+        const err = await res.json();
+        useToastStore.getState().addToast(err.error || 'Failed to delete font.', 'error');
       }
     } catch (error) {
       console.error('Delete font error:', error);
+      useToastStore.getState().addToast('Network error. Failed to delete font.', 'error');
     }
   };
 
@@ -155,14 +165,14 @@ export default function Fonts() {
   return (
     <div className="space-y-6">
       {/* Header action bar */}
-      <div className="flex justify-between items-center bg-white p-6 rounded-3xl border border-wedding-pink-medium/40 shadow-sm">
+      <div className="flex justify-between items-center bg-wedding-card p-6 rounded-3xl border border-wedding-pink-medium/20 shadow-xs">
         <div>
           <h3 className="text-lg font-bold text-wedding-charcoal-dark tracking-tight">Typography & Fonts</h3>
-          <p className="text-xs text-gray-500">Upload wedding typography binaries (.ttf/.otf) and register layout families</p>
+          <p className="text-xs text-gray-500 font-semibold">Upload wedding typography binaries (.ttf/.otf) and register layout families</p>
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-[#a0525e] text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5"
+          className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5"
         >
           <PlusCircle className="w-5 h-5" />
           Upload Font Asset
@@ -175,11 +185,11 @@ export default function Fonts() {
           <p className="text-xs font-semibold text-wedding-pink-dark">Loading your typographies...</p>
         </div>
       ) : (
-        <div className="bg-white border border-wedding-pink-medium/40 rounded-3xl shadow-sm overflow-hidden animate-fadeIn">
+        <div className="bg-wedding-card border border-wedding-pink-medium/20 rounded-3xl shadow-xs overflow-hidden animate-fadeIn">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
-              <tr className="bg-wedding-pink-light/35 border-b border-wedding-pink-medium/30 text-wedding-charcoal-dark font-bold text-xs uppercase tracking-wider">
+              <tr className="bg-wedding-pink-light/40 border-b border-wedding-pink-medium/20 text-wedding-charcoal-dark font-bold text-xs uppercase tracking-wider">
                 <th className="py-4 px-6">Font Family</th>
                 <th className="py-4 px-6">Live Specimen Preview</th>
                 <th className="py-4 px-6">Flutter Asset Destination</th>
@@ -187,12 +197,12 @@ export default function Fonts() {
                 <th className="py-4 px-6 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-wedding-pink-medium/20 text-sm">
+            <tbody className="divide-y divide-wedding-pink-medium/15 text-sm text-wedding-charcoal-dark/95">
               {(Array.isArray(fonts) ? fonts : []).map((f) => (
-                <tr key={f.id} className="hover:bg-wedding-pink-light/10 transition-colors">
+                <tr key={f.id} className="hover:bg-wedding-pink-light/20 transition-colors">
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-2">
-                      <div className="p-2 bg-wedding-pink-light/60 rounded-lg text-wedding-pink-dark">
+                      <div className="p-2 bg-wedding-pink-light/30 rounded-lg text-wedding-pink-dark">
                         <Type className="w-4 h-4" />
                       </div>
                       <span className="font-bold text-wedding-charcoal-dark">{f.family}</span>
@@ -330,7 +340,7 @@ export default function Fonts() {
                 <button
                   type="submit"
                   disabled={!localPath || uploading}
-                  className="px-6 py-3 rounded-2xl bg-wedding-pink-dark hover:bg-[#a0525e] text-white text-sm font-bold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-3 rounded-2xl bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-sm font-bold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Save Font
                 </button>

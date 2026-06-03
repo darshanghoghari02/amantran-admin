@@ -68,8 +68,21 @@ export interface Template {
   fonts: string[];
   languages: string[];
   pages: TemplatePage[];
+  singlePurchasePrice?: number;
+  includedInMonthlyPlan?: boolean;
+  includedInYearlyPlan?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SubscriptionPlan {
+  id: 'monthly' | 'yearly';
+  name: string;
+  price: number;
+  description: string;
+  isActive: boolean;
+  includedCategories: string[];
+  includedTemplateIds: string[];
 }
 
 export interface CustomFont {
@@ -96,5 +109,53 @@ export interface User {
   isBlocked: boolean;
   invitationCount: number;
   draftsCount: number;
+  createdAt: string;
+}
+
+export interface UserSubscription {
+  id: string;
+  userId: string;
+  type: 'monthly' | 'yearly';
+  startDate: string;
+  expiryDate: string;
+  isActive: boolean;
+  amountPaid: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserPurchase {
+  id: string;
+  userId: string;
+  templateId: string;
+  templateName?: string;
+  amountPaid: number;
+  purchasedAt: string;
+  createdAt: string;
+}
+
+export interface UserDraft {
+  id: string;
+  userId: string;
+  templateId: string;
+  templateName?: string;
+  customizedData: Record<string, any>;
+  isPurchased: boolean;
+  savedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Transaction {
+  id: string;
+  userId: string;
+  userEmail?: string;
+  type: 'subscription' | 'single_purchase';
+  amount: number;
+  templateId?: string;
+  templateName?: string;
+  planId?: 'monthly' | 'yearly';
+  status: 'success' | 'failed' | 'pending';
+  timestamp: string;
   createdAt: string;
 }

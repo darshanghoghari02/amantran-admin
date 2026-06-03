@@ -98,6 +98,13 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Category not found.' });
     }
 
+    // Check if any template belongs to this category
+    const templates = await dbService.getAll('templates');
+    const hasTemplates = templates.some(t => t.categoryId === req.params.id);
+    if (hasTemplates) {
+      return res.status(400).json({ error: 'Cannot delete category because it contains active templates. Please delete or reassign the templates first.' });
+    }
+
     // Step 2: Delete image file from disk
     if (category.imageUrl) {
       deleteLocalFile(category.imageUrl);

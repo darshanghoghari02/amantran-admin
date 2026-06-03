@@ -9,21 +9,22 @@ module.exports = {
     extend: {
       colors: {
         wedding: {
-          bg: '#FDFBF7',         // Very warm cream luxury background
-          card: '#FFFFFF',
+          bg: '#FCFAFB',         // Ultra-clean modern off-white/light gray with a rose-tint
+          card: '#FFFFFF',       // Pure white card background
           pink: {
-            light: '#FFF0F2',    // Extremely soft blush pink for cards/hover
-            medium: '#FFD1D7',   // Pastel rose pink
-            dark: '#B86B77',     // Premium vintage rose pink
+            light: '#FFF0F2',    // Soft rose-blush pink
+            medium: '#FFCAD2',   // Beautiful modern soft rose pink
+            dark: '#FF3E5C',     // Vibrant bright rose/coral red from the mobile app
+            hover: '#E62E47',    // Premium vibrant rose hover accent
           },
           gold: {
-            light: '#EED9B3',    // Delicate gold accent
-            accent: '#D4AF37',   // Standard luxury gold
-            dark: '#AA820A',     // Deep polished gold
+            light: '#FFF4E6',    // Warm soft cream gold
+            accent: '#F7C566',   // Clean modern gold accent
+            dark: '#C9943B',     // Deep polished luxury gold
           },
           charcoal: {
-            light: '#3D3B3C',
-            dark: '#1E1D1E',     // Deep premium charcoal for text/sidebars
+            light: '#231A1C',    // Subdued dark gray/rose for sub-containers and active item indicators
+            dark: '#0B0809',     // Rich dark charcoal black for dark sidebar and editor headers
           }
         }
       },

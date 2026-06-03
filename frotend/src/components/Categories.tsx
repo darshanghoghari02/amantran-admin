@@ -2,6 +2,7 @@ import { API_URL, getImageUrl } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Edit3, Trash2, CheckCircle2, XCircle, Upload, Eye } from 'lucide-react';
 import { Category } from '../types';
+import { useToastStore } from '../store/toastStore';
 
 export default function Categories() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -81,12 +82,13 @@ export default function Categories() {
       const data = await res.json();
       if (data.success) {
         setImageUrl(data.filePath);
+        useToastStore.getState().addToast('Category cover image uploaded successfully!', 'success');
       } else {
-        alert(data.error || 'Upload failed');
+        useToastStore.getState().addToast(data.error || 'Upload failed', 'error');
       }
     } catch (err) {
       console.error('Upload error:', err);
-      alert('Failed to upload category image.');
+      useToastStore.getState().addToast('Failed to upload category image.', 'error');
     } finally {
       setUploading(false);
     }
@@ -95,7 +97,7 @@ export default function Categories() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !slug) {
-      alert('Name and slug are required.');
+      useToastStore.getState().addToast('Name and slug are required.', 'warning');
       return;
     }
 
@@ -126,17 +128,22 @@ export default function Categories() {
       if (res.ok) {
         setIsModalOpen(false);
         fetchCategories();
+        useToastStore.getState().addToast(
+          editingId ? 'Category updated successfully!' : 'Category created successfully!',
+          'success'
+        );
       } else {
         const err = await res.json();
-        alert(err.error || 'Save failed');
+        useToastStore.getState().addToast(err.error || 'Save failed', 'error');
       }
     } catch (error) {
       console.error('Submit category error:', error);
+      useToastStore.getState().addToast('Failed to save category.', 'error');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this category? This will affect associated templates.')) return;
+    if (!confirm('Are you sure you want to delete this category?')) return;
     
     try {
       const res = await fetch(`${API_URL}/api/categories/${id}`, {
@@ -144,23 +151,28 @@ export default function Categories() {
       });
       if (res.ok) {
         fetchCategories();
+        useToastStore.getState().addToast('Category deleted successfully!', 'success');
+      } else {
+        const err = await res.json();
+        useToastStore.getState().addToast(err.error || 'Failed to delete category.', 'error');
       }
     } catch (error) {
       console.error('Delete category error:', error);
+      useToastStore.getState().addToast('Network error. Failed to delete category.', 'error');
     }
   };
 
   return (
     <div className="space-y-6">
       {/* Header action bar */}
-      <div className="flex justify-between items-center bg-white p-6 rounded-3xl border border-wedding-pink-medium/40 shadow-sm">
+      <div className="flex justify-between items-center bg-wedding-card p-6 rounded-3xl border border-wedding-pink-medium/20 shadow-xs">
         <div>
           <h3 className="text-lg font-bold text-wedding-charcoal-dark tracking-tight">Category List</h3>
-          <p className="text-xs text-gray-500">Manage categories, icons, cover visual assets, and render sequences</p>
+          <p className="text-xs text-gray-500 font-semibold">Manage categories, icons, cover visual assets, and render sequences</p>
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-[#a0525e] text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5"
+          className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5"
         >
           <PlusCircle className="w-5 h-5" />
           Add Category
@@ -173,11 +185,11 @@ export default function Categories() {
           <p className="text-xs font-semibold text-wedding-pink-dark">Loading your directories...</p>
         </div>
       ) : (
-        <div className="bg-white border border-wedding-pink-medium/40 rounded-3xl shadow-sm overflow-hidden animate-fadeIn">
+        <div className="bg-wedding-card border border-wedding-pink-medium/20 rounded-3xl shadow-xs overflow-hidden animate-fadeIn">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
-              <tr className="bg-wedding-pink-light/35 border-b border-wedding-pink-medium/30 text-wedding-charcoal-dark font-bold text-xs uppercase tracking-wider">
+              <tr className="bg-wedding-pink-light/40 border-b border-wedding-pink-medium/20 text-wedding-charcoal-dark font-bold text-xs uppercase tracking-wider">
                 <th className="py-4 px-6">Image</th>
                 <th className="py-4 px-6">Category Name</th>
                 <th className="py-4 px-6">Slug Path</th>
@@ -186,9 +198,9 @@ export default function Categories() {
                 <th className="py-4 px-6 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-wedding-pink-medium/20 text-sm">
+            <tbody className="divide-y divide-wedding-pink-medium/15 text-sm text-wedding-charcoal-dark/95">
               {(Array.isArray(categories) ? categories : []).map((cat) => (
-                <tr key={cat.id} className="hover:bg-wedding-pink-light/10 transition-colors">
+                <tr key={cat.id} className="hover:bg-wedding-pink-light/20 transition-colors">
                   <td className="py-4 px-6">
                     {cat.imageUrl ? (
                       <div className="w-14 h-10 rounded-lg overflow-hidden border border-wedding-pink-medium/40 bg-gray-100 flex items-center justify-center">
@@ -207,7 +219,7 @@ export default function Categories() {
                   <td className="py-4 px-6 font-bold text-wedding-charcoal-dark">{cat.name}</td>
                   <td className="py-4 px-6 text-gray-500 font-mono text-xs">{cat.slug}</td>
                   <td className="py-4 px-6">
-                    <span className="px-3 py-1 bg-wedding-pink-light text-wedding-pink-dark text-xs font-bold rounded-lg border border-wedding-pink-medium/30">
+                    <span className="px-3 py-1 bg-wedding-pink-light text-wedding-pink-dark text-xs font-bold rounded-lg border border-wedding-pink-medium/30 shadow-xs">
                       {cat.displayOrder}
                     </span>
                   </td>
@@ -374,7 +386,7 @@ export default function Categories() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-3 rounded-2xl bg-wedding-pink-dark hover:bg-[#a0525e] text-white text-sm font-bold shadow-lg transition-all"
+                  className="px-6 py-3 rounded-2xl bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-sm font-bold shadow-lg transition-all"
                 >
                   Save Category
                 </button>

@@ -417,11 +417,39 @@ class DatabaseService {
           updatedAt: now
         }
       ],
+      subscriptions: [
+        {
+          id: 'monthly',
+          name: 'Monthly Premium',
+          price: 99,
+          description: 'Access all monthly premium templates.',
+          isActive: true,
+          includedCategories: [],
+          includedTemplateIds: [],
+          createdAt: now,
+          updatedAt: now
+        },
+        {
+          id: 'yearly',
+          name: 'Yearly Premium',
+          price: 499,
+          description: 'Access all premium templates including yearly exclusives.',
+          isActive: true,
+          includedCategories: [],
+          includedTemplateIds: [],
+          createdAt: now,
+          updatedAt: now
+        }
+      ],
       users: [
         { id: 'user_1', email: 'vicky.patel@gmail.com', displayName: 'Vicky Patel', role: 'editor', isBlocked: false, invitationCount: 12, draftsCount: 3, createdAt: now },
         { id: 'user_2', email: 'sneha.sharma@yahoo.com', displayName: 'Sneha Sharma', role: 'content_manager', isBlocked: false, invitationCount: 4, draftsCount: 1, createdAt: now },
         { id: 'user_3', email: 'rajesh.shah@hotmail.com', displayName: 'Rajesh Shah', role: 'editor', isBlocked: true, invitationCount: 0, draftsCount: 0, createdAt: now }
-      ]
+      ],
+      user_subscriptions: [],
+      user_purchases: [],
+      user_drafts: [],
+      transactions: []
     };
   }
 

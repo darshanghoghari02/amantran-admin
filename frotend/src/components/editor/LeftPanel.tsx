@@ -360,7 +360,7 @@ export default function LeftPanel() {
   return (
     <div className="w-80 bg-white border-r border-wedding-pink-medium/40 flex shrink-0 shadow-sm z-10">
       {/* Icon Selector Left Column */}
-      <div className="w-20 bg-wedding-charcoal-dark border-r border-[#3d2e31]/60 flex flex-col items-center py-6 gap-5">
+      <div className="w-20 bg-wedding-charcoal-dark border-r border-wedding-pink-medium/10 flex flex-col items-center py-6 gap-6 shrink-0 select-none">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -368,14 +368,29 @@ export default function LeftPanel() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`w-14 h-14 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-300 ${
-                isActive
-                  ? 'bg-wedding-pink-dark text-wedding-gold-light'
-                  : 'text-gray-400 hover:bg-wedding-charcoal-light hover:text-white'
-              }`}
+              className="group w-full flex flex-col items-center justify-center gap-1.5 focus:outline-none transition-all duration-300"
             >
-              <Icon className="w-5 h-5 shrink-0" />
-              <span className="text-[9px] font-bold">{tab.name}</span>
+              {/* Highlighted logo (icon) background container */}
+              <div 
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                  isActive
+                    ? 'bg-wedding-pink-dark text-white shadow-lg shadow-wedding-pink-dark/30 scale-110'
+                    : 'bg-transparent text-gray-400 group-hover:bg-wedding-charcoal-light group-hover:text-white'
+                }`}
+              >
+                <Icon className="w-5 h-5 shrink-0" />
+              </div>
+              
+              {/* Highlighted text label */}
+              <span 
+                className={`text-[9px] tracking-wide transition-colors duration-300 ${
+                  isActive 
+                    ? 'text-wedding-pink-dark font-extrabold' 
+                    : 'text-gray-400 group-hover:text-white font-medium'
+                }`}
+              >
+                {tab.name}
+              </span>
             </button>
           );
         })}
@@ -588,7 +603,7 @@ export default function LeftPanel() {
               <h4 className="font-extrabold text-sm text-wedding-charcoal-dark uppercase tracking-wider">Page List</h4>
               <button
                 onClick={() => addPage()}
-                className="text-wedding-pink-dark hover:text-[#a0525e] font-extrabold text-xs flex items-center gap-0.5"
+                className="text-wedding-pink-dark hover:text-wedding-pink-hover font-extrabold text-xs flex items-center gap-0.5"
               >
                 <PlusCircle className="w-3.5 h-3.5" /> Add Page
               </button>

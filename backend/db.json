@@ -1626,5 +1626,29 @@
       "draftsCount": 0,
       "createdAt": "2026-05-23T01:36:27.020Z"
     }
+  ],
+  "subscriptions": [
+    {
+      "id": "monthly",
+      "name": "Monthly Premium",
+      "price": 99,
+      "description": "Access all monthly premium templates.",
+      "isActive": true,
+      "includedCategories": [],
+      "includedTemplateIds": [],
+      "createdAt": "2026-05-23T01:36:27.020Z",
+      "updatedAt": "2026-05-23T01:36:27.020Z"
+    },
+    {
+      "id": "yearly",
+      "name": "Yearly Premium",
+      "price": 499,
+      "description": "Access all premium templates including yearly exclusives.",
+      "isActive": true,
+      "includedCategories": [],
+      "includedTemplateIds": [],
+      "createdAt": "2026-05-23T01:36:27.020Z",
+      "updatedAt": "2026-05-23T01:36:27.020Z"
+    }
   ]
 }

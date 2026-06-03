@@ -2,6 +2,7 @@ import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { Search, ShieldAlert, ShieldCheck, Trash2, Users as UsersIcon, PlusCircle, Edit3, Check, X } from 'lucide-react';
 import { User } from '../types';
+import { useToastStore } from '../store/toastStore';
 
 export default function Users() {
   const [users, setUsers] = useState<User[]>([]);
@@ -66,9 +67,17 @@ export default function Users() {
       });
       if (res.ok) {
         fetchUsers();
+        useToastStore.getState().addToast(
+          currentlyBlocked ? 'User account activated successfully!' : 'User account suspended successfully!',
+          'success'
+        );
+      } else {
+        const err = await res.json();
+        useToastStore.getState().addToast(err.error || 'Failed to toggle user status.', 'error');
       }
     } catch (error) {
       console.error('Toggle block status error:', error);
+      useToastStore.getState().addToast('Network error. Failed to toggle user status.', 'error');
     }
   };
 
@@ -81,16 +90,21 @@ export default function Users() {
       });
       if (res.ok) {
         fetchUsers();
+        useToastStore.getState().addToast('User deleted successfully!', 'success');
+      } else {
+        const err = await res.json();
+        useToastStore.getState().addToast(err.error || 'Failed to delete user.', 'error');
       }
     } catch (error) {
       console.error('Delete user error:', error);
+      useToastStore.getState().addToast('Network error. Failed to delete user.', 'error');
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!displayName || !email || !role) {
-      alert('Name, email, and role are required fields.');
+      useToastStore.getState().addToast('Name, email, and role are required fields.', 'warning');
       return;
     }
 
@@ -118,13 +132,17 @@ export default function Users() {
       if (res.ok) {
         setIsModalOpen(false);
         fetchUsers();
+        useToastStore.getState().addToast(
+          editingUser ? 'User profile updated successfully!' : 'User profile registered successfully!',
+          'success'
+        );
       } else {
         const err = await res.json();
-        alert(err.error || 'Operation failed.');
+        useToastStore.getState().addToast(err.error || 'Operation failed.', 'error');
       }
     } catch (error) {
       console.error('Submit user error:', error);
-      alert('An error occurred while saving.');
+      useToastStore.getState().addToast('An error occurred while saving.', 'error');
     } finally {
       setSaving(false);
     }
@@ -146,15 +164,15 @@ export default function Users() {
   return (
     <div className="space-y-6">
       {/* Search and filter controls header */}
-      <div className="bg-white p-6 rounded-3xl border border-wedding-pink-medium/40 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div className="bg-wedding-card p-6 rounded-3xl border border-wedding-pink-medium/25 shadow-xs flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="w-full md:w-auto flex-1 max-w-md relative">
-          <Search className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
+          <Search className="w-5 h-5 text-gray-500 absolute left-4 top-1/2 transform -translate-y-1/2" />
           <input 
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search profiles by name or email address..."
-            className="w-full pl-12 pr-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 focus:bg-white transition-all duration-300"
+            className="w-full pl-12 pr-4 py-3 rounded-2xl bg-wedding-bg border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 focus:bg-white transition-all duration-300 placeholder-gray-400 font-medium"
           />
         </div>
 
@@ -162,18 +180,18 @@ export default function Users() {
           <select
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
-            className="px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
+            className="px-4 py-3 rounded-2xl bg-wedding-bg border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
           >
-            <option value="">All Account Roles</option>
-            <option value="super_admin">Super Admin</option>
-            <option value="editor">Editor</option>
-            <option value="content_manager">Content Manager</option>
-            <option value="user">User</option>
+            <option value="" className="bg-white text-wedding-charcoal-dark">All Account Roles</option>
+            <option value="super_admin" className="bg-white text-wedding-charcoal-dark">Super Admin</option>
+            <option value="editor" className="bg-white text-wedding-charcoal-dark">Editor</option>
+            <option value="content_manager" className="bg-white text-wedding-charcoal-dark">Content Manager</option>
+            <option value="user" className="bg-white text-wedding-charcoal-dark">User</option>
           </select>
 
           <button
             onClick={openAddModal}
-            className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-[#a0525e] text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 shrink-0"
+            className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 shrink-0"
           >
             <PlusCircle className="w-5 h-5" />
             Create User
@@ -187,11 +205,11 @@ export default function Users() {
           <p className="text-xs font-semibold text-wedding-pink-dark">Querying active directory...</p>
         </div>
       ) : (
-        <div className="bg-white border border-wedding-pink-medium/40 rounded-3xl shadow-sm overflow-hidden animate-fadeIn">
+        <div className="bg-wedding-card border border-wedding-pink-medium/20 rounded-3xl shadow-xs overflow-hidden animate-fadeIn">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
-              <tr className="bg-wedding-pink-light/35 border-b border-wedding-pink-medium/30 text-wedding-charcoal-dark font-bold text-xs uppercase tracking-wider">
+              <tr className="bg-wedding-pink-light/40 border-b border-wedding-pink-medium/20 text-wedding-charcoal-dark font-bold text-xs uppercase tracking-wider">
                 <th className="py-4 px-6">User Profile</th>
                 <th className="py-4 px-6">Role</th>
                 <th className="py-4 px-6">Created Invites</th>
@@ -200,7 +218,7 @@ export default function Users() {
                 <th className="py-4 px-6 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-wedding-pink-medium/20 text-sm">
+            <tbody className="divide-y divide-wedding-pink-medium/15 text-sm text-wedding-charcoal-dark/90">
               {users.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-500 font-semibold">
@@ -209,7 +227,7 @@ export default function Users() {
                 </tr>
               ) : (
                 users.map((user) => (
-                  <tr key={user.id} className="hover:bg-wedding-pink-light/10 transition-colors">
+                  <tr key={user.id} className="hover:bg-wedding-pink-light/20 transition-colors">
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-wedding-pink-light flex items-center justify-center font-extrabold text-wedding-pink-dark text-sm border border-wedding-pink-medium/30">
@@ -365,7 +383,7 @@ export default function Users() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-3 rounded-2xl bg-wedding-pink-dark hover:bg-[#a0525e] text-white text-sm font-bold shadow-lg transition-all disabled:opacity-50"
+                  className="px-6 py-3 rounded-2xl bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-sm font-bold shadow-lg transition-all disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save Profile'}
                 </button>

@@ -91,7 +91,10 @@ router.post('/', async (req, res) => {
       isActive,
       fonts,
       languages,
-      pages
+      pages,
+      singlePurchasePrice,
+      includedInMonthlyPlan,
+      includedInYearlyPlan
     } = req.body;
 
     if (!categoryId || !name || !slug) {
@@ -109,7 +112,10 @@ router.post('/', async (req, res) => {
       isActive: isActive !== false,
       fonts: fonts || [],
       languages: languages || [],
-      pages: pages || []
+      pages: pages || [],
+      singlePurchasePrice: singlePurchasePrice !== undefined ? Number(singlePurchasePrice) : 49,
+      includedInMonthlyPlan: includedInMonthlyPlan !== false,
+      includedInYearlyPlan: includedInYearlyPlan !== false
     });
 
     res.status(201).json(newTemplate);
@@ -132,7 +138,10 @@ router.put('/:id', async (req, res) => {
       isActive,
       fonts,
       languages,
-      pages
+      pages,
+      singlePurchasePrice,
+      includedInMonthlyPlan,
+      includedInYearlyPlan
     } = req.body;
 
     const updates = {};
@@ -147,6 +156,9 @@ router.put('/:id', async (req, res) => {
     if (fonts !== undefined) updates.fonts = fonts;
     if (languages !== undefined) updates.languages = languages;
     if (pages !== undefined) updates.pages = pages;
+    if (singlePurchasePrice !== undefined) updates.singlePurchasePrice = Number(singlePurchasePrice) || 0;
+    if (includedInMonthlyPlan !== undefined) updates.includedInMonthlyPlan = includedInMonthlyPlan === true;
+    if (includedInYearlyPlan !== undefined) updates.includedInYearlyPlan = includedInYearlyPlan === true;
 
     const updated = await dbService.update('templates', req.params.id, updates);
     res.json(updated);

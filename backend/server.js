@@ -12,6 +12,11 @@ import languageRoutes from './src/routes/languages.js';
 import userRoutes from './src/routes/users.js';
 import analyticsRoutes from './src/routes/analytics.js';
 import uploadRoutes from './src/routes/uploads.js';
+import subscriptionRoutes from './src/routes/subscriptions.js';
+import userSubscriptionRoutes from './src/routes/user-subscriptions.js';
+import userPurchaseRoutes from './src/routes/user-purchases.js';
+import userDraftRoutes from './src/routes/user-drafts.js';
+import transactionRoutes from './src/routes/transactions.js';
 import { dbService } from './src/services/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -81,6 +86,11 @@ app.use('/api/languages', languageRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/user-subscriptions', userSubscriptionRoutes);
+app.use('/api/user-purchases', userPurchaseRoutes);
+app.use('/api/user-drafts', userDraftRoutes);
+app.use('/api/transactions', transactionRoutes);
 
 // Base route info
 app.get('/', (req, res) => {

@@ -29,32 +29,33 @@ interface HandleProps {
   onMouseDown: (e: React.MouseEvent, pos: HandlePos) => void;
 }
 
+const HANDLE_SIZE = 8;
+
 const Handle = React.memo(({ pos, style, onMouseDown }: HandleProps) => {
   const isRotate = pos === 'rotate';
-  const isSide = ['n', 's', 'e', 'w'].includes(pos);
 
   return (
     <div
       onMouseDown={(e) => onMouseDown(e, pos)}
       style={{
         position: 'absolute',
-        width: isSide ? 10 : 12,
-        height: isSide ? 10 : 12,
-        background: isRotate ? '#AA820A' : '#ffffff',
-        border: `2px solid ${isRotate ? '#AA820A' : '#B86B77'}`,
-        borderRadius: isRotate ? '50%' : isSide ? '3px' : '50%',
+        width: 8,
+        height: 8,
+        background: isRotate ? '#AA820A' : '#fff',
+        border: `1.5px solid ${isRotate ? '#AA820A' : '#C55B6C'}`,
+        borderRadius: '50%',
         cursor: CURSORS[pos],
         zIndex: 10001,
         boxSizing: 'border-box',
-        boxShadow: '0 1px 6px rgba(0,0,0,0.30)',
-        // Extend pointer hit area without changing visual size
-        padding: 4,
-        margin: -4,
+        padding: 0,
+        margin: 0,
+        boxShadow: 'none',
         ...style,
       }}
     />
   );
 });
+
 Handle.displayName = 'Handle';
 
 /* ═══════════════════════════════════════════════════════════
@@ -67,8 +68,8 @@ interface SelectionOverlayProps {
   onRotateStart: (e: React.MouseEvent, elem: CanvasElement) => void;
 }
 
-const HALF = 6; // half of 12px corner handle  → for exact corner offset
-const HALF_SIDE = 5; // half of 10px side handle
+const HALF = 4;
+const HALF_SIDE = 4;
 
 const SelectionOverlay = React.memo(({
   elem,
@@ -76,10 +77,12 @@ const SelectionOverlay = React.memo(({
   onResizeStart,
   onRotateStart,
 }: SelectionOverlayProps) => {
+
   const handleMouseDown = useCallback(
     (e: React.MouseEvent, pos: HandlePos) => {
       e.stopPropagation();
       e.preventDefault();
+
       if (pos === 'rotate') {
         onRotateStart(e, elem);
       } else {
@@ -91,60 +94,120 @@ const SelectionOverlay = React.memo(({
 
   return (
     <>
-      {/* ── Selection border ── */}
+      {/* Selection Border */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
-          border: '2px solid #B86B77',
-          borderRadius: 1,
+          border: '1px solid #C55B6C',
           pointerEvents: 'none',
           zIndex: 9999,
           boxSizing: 'border-box',
+          padding: 0,
+          margin: 0,
         }}
       />
 
-      {/* ── Rotate handle (top-center, above element) ── */}
+      {/* Rotate Handle */}
       <Handle
         pos="rotate"
         onMouseDown={handleMouseDown}
         style={{
-          top: -28,
+          top: -16,
           left: '50%',
           transform: 'translateX(-50%)',
+          width: 8,
+          height: 8,
+          background: '#AA820A',
+          border: '1px solid #AA820A',
         }}
       />
-      {/* Rotate stem line */}
+
+      {/* Rotate Line */}
       <div
         style={{
           position: 'absolute',
-          top: -18,
+          top: -10,
           left: '50%',
           width: 1,
-          height: 18,
-          background: '#B86B77',
+          height: 10,
+          background: '#C55B6C',
           transform: 'translateX(-50%)',
           pointerEvents: 'none',
           zIndex: 9999,
         }}
       />
 
-      {/* ── 4 Corners ── */}
-      <Handle pos="nw" onMouseDown={handleMouseDown} style={{ top: -HALF, left: -HALF }} />
-      <Handle pos="ne" onMouseDown={handleMouseDown} style={{ top: -HALF, right: -HALF }} />
-      <Handle pos="sw" onMouseDown={handleMouseDown} style={{ bottom: -HALF, left: -HALF }} />
-      <Handle pos="se" onMouseDown={handleMouseDown} style={{ bottom: -HALF, right: -HALF }} />
+      {/* Corners */}
+      <Handle
+        pos="nw"
+        onMouseDown={handleMouseDown}
+        style={{ top: -HALF, left: -HALF }}
+      />
 
-      {/* ── 4 Side mid-points ── */}
-      <Handle pos="n" onMouseDown={handleMouseDown} style={{ top: -HALF_SIDE, left: '50%', transform: 'translateX(-50%)' }} />
-      <Handle pos="s" onMouseDown={handleMouseDown} style={{ bottom: -HALF_SIDE, left: '50%', transform: 'translateX(-50%)' }} />
-      <Handle pos="w" onMouseDown={handleMouseDown} style={{ left: -HALF_SIDE, top: '50%', transform: 'translateY(-50%)' }} />
-      <Handle pos="e" onMouseDown={handleMouseDown} style={{ right: -HALF_SIDE, top: '50%', transform: 'translateY(-50%)' }} />
+      <Handle
+        pos="ne"
+        onMouseDown={handleMouseDown}
+        style={{ top: -HALF, right: -HALF }}
+      />
+
+      <Handle
+        pos="sw"
+        onMouseDown={handleMouseDown}
+        style={{ bottom: -HALF, left: -HALF }}
+      />
+
+      <Handle
+        pos="se"
+        onMouseDown={handleMouseDown}
+        style={{ bottom: -HALF, right: -HALF }}
+      />
+
+      {/* Side Handles */}
+      <Handle
+        pos="n"
+        onMouseDown={handleMouseDown}
+        style={{
+          top: -HALF_SIDE,
+          left: '50%',
+          transform: 'translateX(-50%)',
+        }}
+      />
+
+      <Handle
+        pos="s"
+        onMouseDown={handleMouseDown}
+        style={{
+          bottom: -HALF_SIDE,
+          left: '50%',
+          transform: 'translateX(-50%)',
+        }}
+      />
+
+      <Handle
+        pos="w"
+        onMouseDown={handleMouseDown}
+        style={{
+          left: -HALF_SIDE,
+          top: '50%',
+          transform: 'translateY(-50%)',
+        }}
+      />
+
+      <Handle
+        pos="e"
+        onMouseDown={handleMouseDown}
+        style={{
+          right: -HALF_SIDE,
+          top: '50%',
+          transform: 'translateY(-50%)',
+        }}
+      />
     </>
   );
 });
-SelectionOverlay.displayName = 'SelectionOverlay';
 
+SelectionOverlay.displayName = 'SelectionOverlay';
 /* ═══════════════════════════════════════════════════════════
    MAIN CANVAS AREA
 ═══════════════════════════════════════════════════════════ */
@@ -447,18 +510,20 @@ export default function CanvasArea() {
                   left: elem.x,
                   top: elem.y,
                   width: elem.width,
-                  height: elem.height,
+                  // Text: auto-height so selection border hugs rendered text tightly.
+                  // Images/stickers: keep the stored fixed height.
+                  height: isText ? 'auto' : elem.height,
+                  minHeight: isText ? undefined : elem.height,
                   transform: `rotate(${elem.rotation ?? 0}deg)`,
                   transformOrigin: 'top left',
                   opacity: elem.opacity ?? 1,
                   zIndex: elem.zIndex,
                   cursor: elem.isLocked ? 'not-allowed' : 'move',
-                  // overflow visible — handles protrude outside bounds
                   overflow: 'visible',
-                  // Tight selection: no extra box-model spacing
                   boxSizing: 'border-box',
                   padding: 0,
                   margin: 0,
+                  display: isText ? 'inline-block' : 'block',
                 }}
                 className={
                   !isSelected && !elem.isLocked
@@ -473,24 +538,23 @@ export default function CanvasArea() {
                       fontFamily: elem.languageStyles?.[selectedLanguage]?.fontFamily || elem.fontFamily || 'Rasa',
                       fontSize: `${elem.languageStyles?.[selectedLanguage]?.fontSize ?? elem.fontSize ?? 36}px`,
                       color: elem.languageStyles?.[selectedLanguage]?.color || elem.color || '#4A2E35',
-                      lineHeight: elem.languageStyles?.[selectedLanguage]?.lineHeight ?? elem.lineHeight ?? 1.2,
+                      lineHeight: elem.languageStyles?.[selectedLanguage]?.lineHeight ?? elem.lineHeight ?? 1,
                       textAlign: (elem.languageStyles?.[selectedLanguage]?.alignment || elem.alignment as any) || 'center',
                       fontWeight: elem.languageStyles?.[selectedLanguage]?.fontWeight || elem.fontWeight || 'normal',
-                      letterSpacing: elem.languageStyles?.[selectedLanguage]?.letterSpacing !== undefined 
-                        ? `${elem.languageStyles[selectedLanguage].letterSpacing}px` 
+                      letterSpacing: elem.languageStyles?.[selectedLanguage]?.letterSpacing !== undefined
+                        ? `${elem.languageStyles[selectedLanguage].letterSpacing}px`
                         : (elem.letterSpacing ? `${elem.letterSpacing}px` : '0px'),
                       textShadow: elem.languageStyles?.[selectedLanguage]?.textShadow || elem.textShadow || 'none',
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
                       overflowWrap: 'break-word',
-                      // Fill exact container — no auto-height
-                      width: '100%',
-                      height: '100%',
+                      /* ── KEY FIX: block layout, auto height → selection hugs text ── */
                       display: 'block',
-                      // No extra spacing — pixel-perfect like Canva
+                      width: '100%',
+                      height: 'auto',
                       margin: 0,
                       padding: 0,
-                      overflow: 'hidden',
+                      overflow: 'visible',
                       boxSizing: 'border-box',
                     }}
                   >

@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import './globals.css';
+import { ToastContainer } from '../components/Toast';
 
 export const metadata: Metadata = {
   title: 'Amantran CMS — Canva Wedding Invitation Admin Panel',
@@ -16,6 +17,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased min-h-screen bg-[#FDFBF7] text-[#1E1D1E]" suppressHydrationWarning>
         {children}
+        <ToastContainer />
       </body>
     </html>
   );

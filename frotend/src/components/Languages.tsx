@@ -2,6 +2,7 @@ import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Trash2, CheckCircle2, XCircle, Globe } from 'lucide-react';
 import { Language } from '../types';
+import { useToastStore } from '../store/toastStore';
 
 export default function Languages() {
   const [languages, setLanguages] = useState<Language[]>([]);
@@ -33,7 +34,7 @@ export default function Languages() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code || !name) {
-      alert('Code and Language Name are required.');
+      useToastStore.getState().addToast('Code and Language Name are required.', 'warning');
       return;
     }
 
@@ -49,12 +50,14 @@ export default function Languages() {
       if (res.ok) {
         setIsModalOpen(false);
         fetchLanguages();
+        useToastStore.getState().addToast('Language locale registered successfully!', 'success');
       } else {
         const err = await res.json();
-        alert(err.error || 'Save failed');
+        useToastStore.getState().addToast(err.error || 'Save failed', 'error');
       }
     } catch (error) {
       console.error('Submit language error:', error);
+      useToastStore.getState().addToast('Failed to save language due to a network error.', 'error');
     }
   };
 
@@ -76,9 +79,10 @@ export default function Languages() {
           prev.map(lang => (lang.id === id ? { ...lang, isActive: activeState } : lang))
         );
         const err = await res.json();
-        alert(err.error || 'Failed to toggle status.');
+        useToastStore.getState().addToast(err.error || 'Failed to toggle status.', 'error');
       } else {
         fetchLanguages();
+        useToastStore.getState().addToast('Language status updated successfully!', 'success');
       }
     } catch (error) {
       console.error('Toggle language status error:', error);
@@ -86,7 +90,7 @@ export default function Languages() {
       setLanguages(prev =>
         prev.map(lang => (lang.id === id ? { ...lang, isActive: activeState } : lang))
       );
-      alert('Network error. Failed to toggle status.');
+      useToastStore.getState().addToast('Network error. Failed to toggle status.', 'error');
     }
   };
 
@@ -99,9 +103,14 @@ export default function Languages() {
       });
       if (res.ok) {
         fetchLanguages();
+        useToastStore.getState().addToast('Language deleted successfully!', 'success');
+      } else {
+        const err = await res.json();
+        useToastStore.getState().addToast(err.error || 'Failed to delete language.', 'error');
       }
     } catch (error) {
       console.error('Delete language error:', error);
+      useToastStore.getState().addToast('Network error. Failed to delete language.', 'error');
     }
   };
 
@@ -115,14 +124,14 @@ export default function Languages() {
   return (
     <div className="space-y-6">
       {/* Header action bar */}
-      <div className="flex justify-between items-center bg-white p-6 rounded-3xl border border-wedding-pink-medium/40 shadow-sm">
+      <div className="flex justify-between items-center bg-wedding-card p-6 rounded-3xl border border-wedding-pink-medium/20 shadow-xs">
         <div>
           <h3 className="text-lg font-bold text-wedding-charcoal-dark tracking-tight">Supported Languages</h3>
-          <p className="text-xs text-gray-500">Manage translation locales enabled for card templates</p>
+          <p className="text-xs text-gray-500 font-semibold">Manage translation locales enabled for card templates</p>
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-[#a0525e] text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5"
+          className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5"
         >
           <PlusCircle className="w-5 h-5" />
           Add Language
@@ -135,23 +144,23 @@ export default function Languages() {
           <p className="text-xs font-semibold text-wedding-pink-dark">Loading translation locales...</p>
         </div>
       ) : (
-        <div className="bg-white border border-wedding-pink-medium/40 rounded-3xl shadow-sm overflow-hidden animate-fadeIn">
+        <div className="bg-wedding-card border border-wedding-pink-medium/20 rounded-3xl shadow-xs overflow-hidden animate-fadeIn">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[600px]">
             <thead>
-              <tr className="bg-wedding-pink-light/35 border-b border-wedding-pink-medium/30 text-wedding-charcoal-dark font-bold text-xs uppercase tracking-wider">
+              <tr className="bg-wedding-pink-light/40 border-b border-wedding-pink-medium/20 text-wedding-charcoal-dark font-bold text-xs uppercase tracking-wider">
                 <th className="py-4 px-6">Language</th>
                 <th className="py-4 px-6">Locale Code</th>
                 <th className="py-4 px-6">Status</th>
                 <th className="py-4 px-6 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-wedding-pink-medium/20 text-sm">
+            <tbody className="divide-y divide-wedding-pink-medium/15 text-sm text-wedding-charcoal-dark/95">
               {(Array.isArray(languages) ? languages : []).map((lang) => (
-                <tr key={lang.id} className="hover:bg-wedding-pink-light/10 transition-colors">
+                <tr key={lang.id} className="hover:bg-wedding-pink-light/20 transition-colors">
                   <td className="py-4 px-6 font-bold text-wedding-charcoal-dark">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-wedding-pink-light flex items-center justify-center text-wedding-pink-dark">
+                      <div className="w-8 h-8 rounded-lg bg-wedding-pink-light/30 flex items-center justify-center text-wedding-pink-dark">
                         <Globe className="w-4 h-4" />
                       </div>
                       <span>{lang.name}</span>
@@ -258,7 +267,7 @@ export default function Languages() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-wedding-pink-dark hover:bg-[#a0525e] text-white text-xs font-bold shadow-lg transition-all"
+                  className="px-5 py-2.5 rounded-xl bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-xs font-bold shadow-lg transition-all"
                 >
                   Save Language
                 </button>

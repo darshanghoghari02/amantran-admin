@@ -1,5 +1,5 @@
 import { API_URL, getImageUrl } from '@/config';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   PlusCircle,
   Copy,
@@ -12,9 +12,14 @@ import {
   Languages,
   Type,
   Upload,
-  Palette
+  Palette,
+  Search,
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Template, Category, CustomFont, Language, User } from '../types';
+import { useToastStore } from '../store/toastStore';
 
 interface TemplatesListProps {
   onOpenEditor: (template: Template) => void;
@@ -29,6 +34,32 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
 
   const [loading, setLoading] = useState(true);
   const [selectedCatId, setSelectedCatId] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
+  const [showArrows, setShowArrows] = useState(false);
+
+  const checkScrollable = () => {
+    if (categoryScrollRef.current) {
+      const { scrollWidth, clientWidth } = categoryScrollRef.current;
+      setShowArrows(scrollWidth > clientWidth);
+    }
+  };
+
+  useEffect(() => {
+    checkScrollable();
+    const timer = setTimeout(checkScrollable, 100);
+    window.addEventListener('resize', checkScrollable);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', checkScrollable);
+    };
+  }, [categories]);
+
+  const scrollCategories = (direction: 'left' | 'right') => {
+    if (categoryScrollRef.current) {
+      categoryScrollRef.current.scrollBy({ left: direction === 'left' ? -200 : 200, behavior: 'smooth' });
+    }
+  };
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
 
@@ -40,6 +71,11 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
   const [isActive, setIsActive] = useState(true);
   const [selectedFonts, setSelectedFonts] = useState<string[]>([]);
   const [selectedLangs, setSelectedLangs] = useState<string[]>([]);
+
+  // Pricing & Access State
+  const [singlePurchasePrice, setSinglePurchasePrice] = useState(49);
+  const [includedInMonthlyPlan, setIncludedInMonthlyPlan] = useState(true);
+  const [includedInYearlyPlan, setIncludedInYearlyPlan] = useState(true);
 
   // File Upload State
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -97,7 +133,7 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !slug || !categoryId) {
-      alert('Template name, slug and category are required.');
+      useToastStore.getState().addToast('Template name, slug and category are required.', 'warning');
       return;
     }
 
@@ -1692,7 +1728,10 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
         isPremium,
         isActive,
         fonts: selectedFonts,
-        languages: selectedLangs
+        languages: selectedLangs,
+        singlePurchasePrice: Number(singlePurchasePrice) || 0,
+        includedInMonthlyPlan,
+        includedInYearlyPlan
       } : {
         categoryId,
         name,
@@ -1704,7 +1743,10 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
         isActive,
         fonts: selectedFonts,
         languages: selectedLangs,
-        pages: initialPages
+        pages: initialPages,
+        singlePurchasePrice: Number(singlePurchasePrice) || 0,
+        includedInMonthlyPlan,
+        includedInYearlyPlan
       };
 
       const url = editingTemplate ? `${API_URL}/api/templates/${editingTemplate.id}` : `${API_URL}/api/templates`;
@@ -1720,13 +1762,20 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
         setIsModalOpen(false);
         setEditingTemplate(null);
         fetchInitialData();
+        useToastStore.getState().addToast(
+          editingTemplate ? 'Template updated successfully!' : 'Template created successfully!',
+          'success'
+        );
       } else {
         const err = await res.json();
-        alert(err.error || 'Create failed');
+        useToastStore.getState().addToast(err.error || 'Save failed', 'error');
       }
     } catch (error) {
       console.error('Submit template error:', error);
-      alert('Error creating template.');
+      useToastStore.getState().addToast(
+        editingTemplate ? 'Error updating template.' : 'Error creating template.',
+        'error'
+      );
     } finally {
       setUploading(false);
     }
@@ -1739,9 +1788,14 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
       });
       if (res.ok) {
         fetchInitialData();
+        useToastStore.getState().addToast('Template duplicated successfully!', 'success');
+      } else {
+        const err = await res.json();
+        useToastStore.getState().addToast(err.error || 'Failed to duplicate template.', 'error');
       }
     } catch (error) {
       console.error('Duplicate template error:', error);
+      useToastStore.getState().addToast('Failed to duplicate template.', 'error');
     }
   };
 
@@ -1754,9 +1808,14 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
       });
       if (res.ok) {
         fetchInitialData();
+        useToastStore.getState().addToast('Template deleted successfully!', 'success');
+      } else {
+        const err = await res.json();
+        useToastStore.getState().addToast(err.error || 'Failed to delete template.', 'error');
       }
     } catch (error) {
       console.error('Delete template error:', error);
+      useToastStore.getState().addToast('Failed to delete template.', 'error');
     }
   };
 
@@ -1773,13 +1832,15 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
         body: JSON.stringify({ isActive: !activeState })
       });
 
-      if (!res.ok) {
+      if (res.ok) {
+        useToastStore.getState().addToast('Template status updated successfully!', 'success');
+      } else {
         // Rollback state if the update failed on the server
         setTemplates(prev =>
           prev.map(tpl => (tpl.id === id ? { ...tpl, isActive: activeState } : tpl))
         );
         const err = await res.json();
-        alert(err.error || 'Failed to toggle status.');
+        useToastStore.getState().addToast(err.error || 'Failed to toggle status.', 'error');
       }
     } catch (error) {
       console.error('Toggle template state error:', error);
@@ -1787,7 +1848,7 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
       setTemplates(prev =>
         prev.map(tpl => (tpl.id === id ? { ...tpl, isActive: activeState } : tpl))
       );
-      alert('Network error. Failed to toggle status.');
+      useToastStore.getState().addToast('Network error. Failed to toggle status.', 'error');
     }
   };
 
@@ -1800,6 +1861,9 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
     setIsActive(tpl.isActive);
     setSelectedFonts(tpl.fonts || []);
     setSelectedLangs(tpl.languages || []);
+    setSinglePurchasePrice(tpl.singlePurchasePrice ?? 49);
+    setIncludedInMonthlyPlan(tpl.includedInMonthlyPlan ?? true);
+    setIncludedInYearlyPlan(tpl.includedInYearlyPlan ?? true);
     setThumbnailFile(null);
     setBgFiles(null);
     setIsModalOpen(true);
@@ -1812,50 +1876,132 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
     setCategoryId(categories[0]?.id || '');
     setIsPremium(true);
     setIsActive(true);
-    setSelectedFonts(fonts.slice(0, 2).map(f => f.family)); // pre-check some
+    setSelectedFonts(fonts.slice(0, 2).map(f => f.family));
     setSelectedLangs(languages.slice(0, 3).map(l => l.name));
+    setSinglePurchasePrice(49);
+    setIncludedInMonthlyPlan(true);
+    setIncludedInYearlyPlan(true);
     setThumbnailFile(null);
     setBgFiles(null);
     setIsModalOpen(true);
   };
 
+  // Filtered templates based on search query and category
+  const filteredTemplates = templates.filter((tpl) => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return true;
+    return (
+      tpl.name.toLowerCase().includes(query) ||
+      tpl.slug.toLowerCase().includes(query)
+    );
+  });
+
   return (
     <div className="space-y-6">
-      {/* Category filters actions bar */}
-      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-wedding-pink-medium/40 shadow-sm flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-        <div className="flex gap-2 items-center flex-wrap w-full">
+      {/* Toolbar: Search bar + Create Template button on top, Category filters below */}
+      <div className="bg-wedding-card p-4 sm:p-6 rounded-3xl border border-wedding-pink-medium/10 shadow-md flex flex-col gap-4">
+        {/* Row 1: Search Bar + Create Template Button */}
+        <div className="flex items-center gap-3">
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+              <Search className="w-4 h-4 text-wedding-pink-dark/60" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search templates by name or slug..."
+              className="w-full pl-11 pr-10 py-3 bg-wedding-bg border border-wedding-pink-medium/20 rounded-2xl text-sm font-medium text-wedding-charcoal-dark placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/30 focus:border-wedding-pink-dark/40 transition-all duration-300 shadow-sm"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-3 flex items-center px-1 text-gray-400 hover:text-wedding-pink-dark transition-colors"
+                title="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Create Template Button */}
+          {(currentUser?.role === 'super_admin' || currentUser?.role === 'content_manager' || !currentUser) && (
+            <button
+              onClick={openAddModal}
+              className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-[#a0525e] text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 shrink-0"
+            >
+              <PlusCircle className="w-5 h-5" />
+              Create Template
+            </button>
+          )}
+        </div>
+
+        {/* Row 2: All Invitations fixed + Category Scroll */}
+        <div className="flex items-center gap-0">
+          {/* Fixed: All Invitations button */}
           <button
             onClick={() => setSelectedCatId('')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${!selectedCatId
-              ? 'bg-wedding-charcoal-dark text-wedding-gold-light'
-              : 'bg-wedding-pink-light/35 text-wedding-charcoal-light hover:bg-wedding-pink-light/60'
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 shrink-0 border ${!selectedCatId
+              ? 'bg-wedding-pink-dark text-white border-transparent shadow-md shadow-wedding-pink-dark/15'
+              : 'bg-wedding-pink-light/40 text-wedding-charcoal-light/85 border-wedding-pink-medium/30 hover:bg-wedding-pink-light/90 hover:text-wedding-pink-dark hover:border-wedding-pink-medium/60'
               }`}
           >
             All Invitations
           </button>
 
-          {categories.map((cat) => (
+          {/* Divider */}
+          <div className="w-px h-6 bg-wedding-pink-medium/20 mx-3 shrink-0" />
+
+          {/* Left Arrow */}
+          {showArrows && (
             <button
-              key={cat.id}
-              onClick={() => setSelectedCatId(cat.id)}
-              className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 ${selectedCatId === cat.id
-                ? 'bg-wedding-charcoal-dark text-wedding-gold-light'
-                : 'bg-wedding-pink-light/35 text-wedding-charcoal-light hover:bg-wedding-pink-light/60'
-                }`}
+              onClick={() => scrollCategories('left')}
+              className="shrink-0 p-2 rounded-xl bg-wedding-pink-light/40 text-wedding-charcoal-light/75 border border-wedding-pink-medium/20 hover:bg-wedding-pink-light/90 hover:text-wedding-pink-dark hover:border-wedding-pink-medium/50 transition-all duration-200 mr-2 animate-fadeIn"
             >
-              {cat.name}
+              <ChevronLeft className="w-4 h-4" />
             </button>
-          ))}
+          )}
+
+          {/* Scrollable Categories */}
+          <div
+            ref={categoryScrollRef}
+            className="flex gap-2 items-center overflow-x-auto flex-1"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCatId(cat.id)}
+                className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 shrink-0 border ${selectedCatId === cat.id
+                  ? 'bg-wedding-pink-dark text-white border-transparent shadow-md shadow-wedding-pink-dark/15'
+                  : 'bg-wedding-pink-light/40 text-wedding-charcoal-light/85 border-wedding-pink-medium/30 hover:bg-wedding-pink-light/90 hover:text-wedding-pink-dark hover:border-wedding-pink-medium/60'
+                  }`}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Right Arrow */}
+          {showArrows && (
+            <button
+              onClick={() => scrollCategories('right')}
+              className="shrink-0 p-2 rounded-xl bg-wedding-pink-light/40 text-wedding-charcoal-light/75 border border-wedding-pink-medium/20 hover:bg-wedding-pink-light/90 hover:text-wedding-pink-dark hover:border-wedding-pink-medium/50 transition-all duration-200 ml-2 animate-fadeIn"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
-        {(currentUser?.role === 'super_admin' || currentUser?.role === 'content_manager' || !currentUser) && (
-          <button
-            onClick={openAddModal}
-            className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-[#a0525e] text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 shrink-0 w-full sm:w-auto justify-center"
-          >
-            <PlusCircle className="w-5 h-5" />
-            Create Template
-          </button>
+        {/* Search Results Count */}
+        {searchQuery && (
+          <p className="text-xs font-semibold text-wedding-charcoal-light/70">
+            {filteredTemplates.length === 0
+              ? 'No templates found'
+              : `${filteredTemplates.length} template${filteredTemplates.length !== 1 ? 's' : ''} found for "${searchQuery}"`
+            }
+          </p>
         )}
       </div>
 
@@ -1866,15 +2012,15 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-fadeIn">
-          {templates.length === 0 ? (
-            <div className="col-span-full py-16 text-center text-gray-500 font-semibold bg-white border rounded-3xl border-wedding-pink-medium/30">
-              No invitation templates inside this category directory yet.
+          {filteredTemplates.length === 0 ? (
+            <div className="col-span-full py-16 text-center text-gray-400 font-semibold bg-wedding-card border rounded-3xl border-wedding-pink-medium/10 shadow-md">
+              {searchQuery ? `No templates found for "${searchQuery}"` : 'No invitation templates inside this category directory yet.'}
             </div>
           ) : (
-            templates.map((tpl) => (
+            filteredTemplates.map((tpl) => (
               <div
                 key={tpl.id}
-                className="group bg-white border border-wedding-pink-medium/40 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+                className="group bg-wedding-card border border-wedding-pink-medium/10 rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
               >
                 {/* Visual Thumbnail Frame */}
                 <div className="aspect-[2/3] w-full bg-gray-50 border-b border-wedding-pink-medium/20 relative overflow-hidden flex items-center justify-center">
@@ -1885,13 +2031,33 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
                   />
 
                   {/* Premium Lock Banner */}
-                  <div className="absolute left-4 top-4 flex gap-2">
+                  <div className="absolute left-3 top-3 flex flex-wrap gap-1 max-w-[calc(100%-24px)]">
                     {tpl.isPremium ? (
-                      <span className="flex items-center gap-1 px-3 py-1 bg-wedding-gold-dark text-white text-[10px] font-bold rounded-lg uppercase shadow">
-                        <Sparkles className="w-3 h-3 text-wedding-gold-light fill-wedding-gold-light" /> Premium
-                      </span>
+                      <>
+                        {tpl.includedInMonthlyPlan && (
+                          <span className="flex items-center gap-0.5 px-2 py-0.5 bg-blue-600 text-white text-[9px] font-extrabold rounded-md uppercase shadow-sm">
+                            Monthly
+                          </span>
+                        )}
+                        {tpl.includedInYearlyPlan && (
+                          <span className="flex items-center gap-0.5 px-2 py-0.5 bg-purple-600 text-white text-[9px] font-extrabold rounded-md uppercase shadow-sm">
+                            Yearly
+                          </span>
+                        )}
+                        {tpl.singlePurchasePrice && tpl.singlePurchasePrice > 0 ? (
+                          <span className="flex items-center gap-0.5 px-2 py-0.5 bg-amber-600 text-white text-[9px] font-extrabold rounded-md uppercase shadow-sm font-mono">
+                            ₹{tpl.singlePurchasePrice}
+                          </span>
+                        ) : (
+                          !tpl.includedInMonthlyPlan && !tpl.includedInYearlyPlan && (
+                            <span className="flex items-center gap-1 px-2.5 py-0.5 bg-wedding-gold-dark text-white text-[9px] font-bold rounded-md uppercase shadow-sm">
+                              <Sparkles className="w-2.5 h-2.5 text-wedding-gold-light fill-wedding-gold-light" /> Premium
+                            </span>
+                          )
+                        )}
+                      </>
                     ) : (
-                      <span className="px-3 py-1 bg-wedding-charcoal-light/95 text-white text-[10px] font-bold rounded-lg uppercase shadow">
+                      <span className="px-2 py-0.5 bg-wedding-charcoal-light/95 text-white text-[9px] font-bold rounded-md uppercase shadow-sm">
                         Free
                       </span>
                     )}
@@ -1922,30 +2088,30 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
                 </div>
 
                 {/* Details Footer */}
-                <div className="p-4 space-y-3 bg-white">
+                <div className="p-4 space-y-3 bg-wedding-card">
                   <div className="space-y-0.5">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold text-wedding-pink-dark uppercase tracking-wider">
                         {categories.find(c => c.id === tpl.categoryId)?.name || 'General'}
                       </span>
-                      <span className="text-[10px] font-semibold text-wedding-charcoal-light bg-wedding-pink-light px-2 py-0.5 rounded-md font-mono">{tpl.pages?.length || 0} pages</span>
+                      <span className="text-[10px] font-bold text-wedding-pink-dark bg-wedding-pink-light border border-wedding-pink-medium/20 px-2 py-0.5 rounded-md font-mono shadow-xs">{tpl.pages?.length || 0} pages</span>
                     </div>
                     <h4 className="text-sm font-extrabold text-wedding-charcoal-dark truncate" title={tpl.name}>{tpl.name}</h4>
-                    <p className="text-[10px] text-gray-400 font-mono truncate">{tpl.slug}</p>
+                    <p className="text-[10px] text-gray-500 font-mono truncate">{tpl.slug}</p>
                   </div>
 
                   {/* Actions Bar */}
-                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-wedding-pink-medium/20">
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-wedding-pink-medium/15">
                     {currentUser?.role === 'user' ? (
-                      <span className="flex-1 py-2 border border-wedding-pink-medium/30 text-wedding-charcoal-light/60 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 bg-gray-50/50 select-none">
+                      <span className="flex-1 py-2 border border-wedding-pink-medium/20 text-wedding-charcoal-light/60 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 bg-gray-50/50 select-none">
                         Read-Only View
                       </span>
                     ) : (
                       <button
                         onClick={() => onOpenEditor(tpl)}
-                        className="flex-1 py-2 bg-wedding-charcoal-dark hover:bg-wedding-charcoal-light text-wedding-gold-light hover:text-white text-xs font-bold rounded-xl shadow flex items-center justify-center gap-1.5 transition-all duration-300 transform hover:-translate-y-0.5 shrink-0"
+                        className="flex-1 py-2 bg-wedding-charcoal-dark hover:bg-wedding-charcoal-light text-white text-xs font-extrabold rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition-all duration-300 transform hover:-translate-y-0.5 shrink-0"
                       >
-                        <Palette className="w-3.5 h-3.5 text-wedding-pink-medium" />
+                        <Palette className="w-3.5 h-3.5 text-wedding-pink-dark" />
                         Design
                       </button>
                     )}
@@ -2129,6 +2295,67 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
                   })}
                 </div>
               </div>
+
+              {/* Pricing & Access Control — shown only when isPremium = true */}
+              {isPremium && (
+                <div className="space-y-3 p-4 bg-gradient-to-br from-amber-50 to-yellow-50/30 border border-amber-200/50 rounded-2xl animate-fadeIn">
+                  <h5 className="text-xs font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-amber-700 fill-amber-300" />
+                    Pricing & Subscription Plans
+                  </h5>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                    {/* Single Purchase Price */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-wedding-charcoal-light uppercase tracking-wider block">Single Purchase Price (INR)</label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-3.5 flex items-center text-gray-500 font-bold text-sm">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={singlePurchasePrice}
+                          onChange={(e) => setSinglePurchasePrice(Math.max(0, parseInt(e.target.value) || 0))}
+                          className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-white border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 font-semibold"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Included in Monthly Plan Toggle */}
+                    <div className="space-y-1.5 flex flex-col justify-center">
+                      <label className="text-[10px] font-bold text-wedding-charcoal-light uppercase tracking-wider mb-2 block">Monthly Plan Access</label>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={includedInMonthlyPlan}
+                          onChange={(e) => setIncludedInMonthlyPlan(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        <span className="ml-3 text-xs font-bold text-wedding-charcoal-dark">
+                          {includedInMonthlyPlan ? 'Monthly Included' : 'Excluded'}
+                        </span>
+                      </label>
+                    </div>
+
+                    {/* Included in Yearly Plan Toggle */}
+                    <div className="space-y-1.5 flex flex-col justify-center">
+                      <label className="text-[10px] font-bold text-wedding-charcoal-light uppercase tracking-wider mb-2 block">Yearly Plan Access</label>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={includedInYearlyPlan}
+                          onChange={(e) => setIncludedInYearlyPlan(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        <span className="ml-3 text-xs font-bold text-wedding-charcoal-dark">
+                          {includedInYearlyPlan ? 'Yearly Included' : 'Excluded'}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Row 5: Media Files Multi Uploads */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

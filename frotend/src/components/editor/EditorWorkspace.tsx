@@ -18,6 +18,7 @@ import CanvasArea from './CanvasArea';
 import RightPanel from './RightPanel';
 import PreviewModal from './PreviewModal';
 import { translateText } from '../../utils/translate';
+import { useToastStore } from '../../store/toastStore';
 
 interface EditorWorkspaceProps {
   onClose: () => void;
@@ -213,12 +214,15 @@ export default function EditorWorkspace({ onClose }: EditorWorkspaceProps) {
       if (res.ok) {
         setAutosaveStatus('saved');
         setTimeout(() => setAutosaveStatus('idle'), 2000);
+        useToastStore.getState().addToast('Template draft saved successfully!', 'success');
       } else {
         setAutosaveStatus('error');
+        useToastStore.getState().addToast('Failed to save template draft.', 'error');
       }
     } catch (err) {
       console.error('Manual save failed:', err);
       setAutosaveStatus('error');
+      useToastStore.getState().addToast('Network error. Failed to save template draft.', 'error');
     } finally {
       setSavingManual(false);
     }
@@ -258,7 +262,7 @@ export default function EditorWorkspace({ onClose }: EditorWorkspaceProps) {
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-wedding-bg">
       {/* 1. Designer Header Toolbar */}
-      <div className="h-16 bg-wedding-charcoal-dark text-white px-6 flex items-center justify-between border-b border-[#3d2e31]/60 shrink-0">
+      <div className="h-16 bg-wedding-charcoal-dark text-white px-6 flex items-center justify-between border-b border-wedding-pink-medium/10 shrink-0">
         <div className="flex items-center gap-4">
           <button
             onClick={onClose}
@@ -278,7 +282,7 @@ export default function EditorWorkspace({ onClose }: EditorWorkspaceProps) {
 
         {/* Center: Undo/Redo & Zoom Adjusters */}
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-1 bg-wedding-charcoal-light/45 p-1 rounded-xl border border-[#3d2e31]/40">
+          <div className="flex items-center gap-1 bg-wedding-charcoal-light/45 p-1 rounded-xl border border-wedding-pink-medium/10">
             <button
               onClick={undo}
               disabled={undoStack.length === 0}
@@ -298,7 +302,7 @@ export default function EditorWorkspace({ onClose }: EditorWorkspaceProps) {
           </div>
 
           {/* View Zoom Controller */}
-          <div className="flex items-center gap-2 bg-wedding-charcoal-light/45 px-3 py-1.5 rounded-xl border border-[#3d2e31]/40 text-xs font-bold text-gray-300">
+          <div className="flex items-center gap-2 bg-wedding-charcoal-light/45 px-3 py-1.5 rounded-xl border border-wedding-pink-medium/10 text-xs font-bold text-gray-300">
             <button
               onClick={() => setZoom(zoom - 5)}
               className="hover:text-white transition-colors"

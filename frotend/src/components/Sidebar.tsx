@@ -8,7 +8,8 @@ import {
   Users, 
   Heart, 
   Settings, 
-  LogOut 
+  LogOut,
+  Sparkles
 } from 'lucide-react';
 import { User } from '../types';
 
@@ -29,6 +30,7 @@ export default function Sidebar({ currentTab, setCurrentTab, currentUser, onLogo
     { id: 'fonts', name: 'Typography & Fonts', icon: Type },
     { id: 'languages', name: 'Languages', icon: Languages },
     { id: 'users', name: 'User Management', icon: Users },
+    { id: 'subscriptions', name: 'Subscription Settings', icon: Sparkles },
   ];
 
   // Dynamically filter items by role permissions
@@ -37,7 +39,7 @@ export default function Sidebar({ currentTab, setCurrentTab, currentUser, onLogo
     if (role === 'super_admin') return true;
     
     if (role === 'content_manager') {
-      return item.id !== 'users';
+      return item.id !== 'users' && item.id !== 'subscriptions';
     }
     
     if (role === 'editor' || role === 'user') {
@@ -64,20 +66,20 @@ export default function Sidebar({ currentTab, setCurrentTab, currentUser, onLogo
   };
 
   return (
-    <aside className={`w-72 bg-wedding-charcoal-dark border-r border-[#3d2e31]/60 flex flex-col justify-between text-white shrink-0 fixed inset-y-0 left-0 z-50 md:static transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+    <aside className={`w-72 bg-wedding-charcoal-dark border-r border-wedding-pink-medium/10 flex flex-col justify-between text-white shrink-0 fixed inset-y-0 left-0 z-50 md:static transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 shadow-xl`}>
       <div>
         {/* Logo / Title Area */}
-        <div className="p-8 border-b border-[#3d2e31]/40 flex items-center justify-between gap-3">
+        <div className="p-8 border-b border-wedding-pink-medium/10 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-wedding-pink-medium to-wedding-gold-accent flex items-center justify-center shadow-lg shadow-wedding-pink-medium/10">
-              <Heart className="w-5 h-5 text-wedding-charcoal-dark fill-wedding-charcoal-dark" />
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#ff6b81] to-wedding-pink-dark flex items-center justify-center shadow-lg shadow-wedding-pink-medium/30 animate-pulse">
+              <Heart className="w-5 h-5 text-white fill-white" />
             </div>
             <div>
-              <h1 className="font-semibold text-lg tracking-wide bg-gradient-to-r from-wedding-pink-medium via-wedding-gold-light to-wedding-gold-accent bg-clip-text text-transparent">
+              <h1 className="font-extrabold text-lg tracking-wider text-white font-sans uppercase">
                 AMANTRAN
               </h1>
-              <p className="text-[10px] text-wedding-pink-medium/60 uppercase tracking-widest font-medium">
-                Wedding invitation CMS
+              <p className="text-[10px] text-wedding-pink-dark uppercase tracking-widest font-bold mt-0.5">
+                Invitation Card Maker
               </p>
             </div>
           </div>
@@ -85,7 +87,7 @@ export default function Sidebar({ currentTab, setCurrentTab, currentUser, onLogo
             <button
               type="button"
               onClick={() => setIsSidebarOpen(false)}
-              className="md:hidden text-gray-400 hover:text-white p-2 hover:bg-[#3d2e31]/50 rounded-xl transition-colors border border-transparent hover:border-[#3d2e31]/40"
+              className="md:hidden text-gray-400 hover:text-white p-2 hover:bg-wedding-pink-light/10 rounded-xl transition-colors border border-transparent hover:border-wedding-pink-medium/10"
             >
               ✕
             </button>
@@ -104,13 +106,13 @@ export default function Sidebar({ currentTab, setCurrentTab, currentUser, onLogo
                   setCurrentTab(item.id);
                   if (setIsSidebarOpen) setIsSidebarOpen(false);
                 }}
-                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-300 ${
+                className={`group w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-sm font-bold transition-all duration-300 ${
                   isActive
-                    ? 'bg-gradient-to-r from-wedding-pink-dark/80 to-[#5a363d]/80 text-wedding-gold-light border-l-4 border-wedding-gold-accent shadow-md shadow-wedding-pink-dark/10'
-                    : 'text-gray-300 hover:bg-wedding-charcoal-light hover:text-white hover:pl-6'
+                    ? 'bg-gradient-to-r from-wedding-pink-dark to-[#ff6b81] text-white border-l-4 border-white shadow-lg shadow-wedding-pink-dark/20 scale-[1.02]'
+                    : 'text-gray-400 hover:bg-wedding-pink-light/10 hover:text-white hover:pl-6'
                 }`}
               >
-                <Icon className={`w-5 h-5 transition-transform duration-300 ${isActive ? 'text-wedding-gold-accent scale-110' : 'text-gray-400'}`} />
+                <Icon className={`w-5 h-5 transition-transform duration-300 ${isActive ? 'text-white scale-110' : 'text-gray-500 group-hover:text-wedding-pink-dark group-hover:scale-105'}`} />
                 {item.name}
               </button>
             );
@@ -119,16 +121,16 @@ export default function Sidebar({ currentTab, setCurrentTab, currentUser, onLogo
       </div>
 
       {/* Dynamic Admin User Profile footer */}
-      <div className="p-4 border-t border-[#3d2e31]/40">
-        <div className="flex items-center gap-3 p-3 bg-wedding-charcoal-light/30 rounded-xl mb-3">
-          <div className="w-9 h-9 rounded-full bg-wedding-pink-medium/80 flex items-center justify-center font-bold text-wedding-charcoal-dark text-xs select-none">
+      <div className="p-4 border-t border-wedding-pink-medium/10">
+        <div className="flex items-center gap-3 p-3 bg-wedding-charcoal-light/35 border border-wedding-pink-medium/10 rounded-2xl mb-3">
+          <div className="w-9 h-9 rounded-full bg-wedding-pink-dark flex items-center justify-center font-bold text-white text-xs select-none border border-wedding-pink-medium/30">
             {getInitials(currentUser?.displayName || 'Super Admin')}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-wedding-gold-light truncate">
+            <p className="text-sm font-bold text-white truncate">
               {currentUser?.displayName || 'Super Admin'}
             </p>
-            <p className="text-[9px] font-bold text-wedding-pink-medium/60 uppercase tracking-wider mb-0.5">
+            <p className="text-[9px] font-extrabold text-wedding-pink-dark uppercase tracking-wider mb-0.5">
               {roleLabels[currentUser?.role || 'super_admin']}
             </p>
             <p className="text-[10px] text-gray-400 truncate">{currentUser?.email || 'admin@amantran.com'}</p>
@@ -137,7 +139,7 @@ export default function Sidebar({ currentTab, setCurrentTab, currentUser, onLogo
         
         <button 
           onClick={onLogout}
-          className="w-full flex items-center gap-4 px-4 py-3 text-red-400 hover:bg-red-950/20 hover:text-red-300 rounded-xl text-sm font-medium transition-all duration-300"
+          className="w-full flex items-center gap-4 px-4 py-3 text-red-400 hover:bg-red-950/20 hover:text-red-300 rounded-xl text-sm font-bold transition-all duration-300"
         >
           <LogOut className="w-5 h-5" />
           Logout

@@ -280,6 +280,7 @@ export default function CanvasArea() {
     addPage,
     duplicatePage,
     deletePage,
+    pushHistory,
   } = useCanvasStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -288,7 +289,16 @@ export default function CanvasArea() {
   const currentPage = template?.pages?.[selectedPageIndex];
   const selectedElement = currentPage?.elements?.find((el) => el.id === selectedElementId);
 
+  const [prevSelectedId, setPrevSelectedId] = React.useState<string | null>(null);
   const [measuredTextHeight, setMeasuredTextHeight] = React.useState<number | null>(null);
+
+  if (selectedElementId !== prevSelectedId) {
+    setPrevSelectedId(selectedElementId);
+    const initialHeight = (typeof document !== 'undefined' && selectedElementId)
+      ? (document.getElementById(selectedElementId)?.clientHeight ?? null)
+      : null;
+    setMeasuredTextHeight(initialHeight);
+  }
 
   React.useLayoutEffect(() => {
     if (!selectedElement || selectedElement.type !== 'text') {
@@ -345,6 +355,8 @@ export default function CanvasArea() {
     e.preventDefault();
     e.stopPropagation();
 
+    pushHistory();
+
     const startX = e.clientX;
     const startY = e.clientY;
     const initX = elem.x;
@@ -367,7 +379,7 @@ export default function CanvasArea() {
         showSnap(false);
       }
 
-      updateElement(elem.id, { x: newX, y: newY });
+      updateElement(elem.id, { x: newX, y: newY }, true);
     };
 
     const onUp = () => {
@@ -378,7 +390,7 @@ export default function CanvasArea() {
 
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-  }, [displayScale, selectElement, updateElement]);
+  }, [displayScale, selectElement, updateElement, pushHistory]);
 
   /* ─────────────────────────── RESIZE ─────────────────────────── */
   const handleResizeStart = useCallback((
@@ -389,13 +401,15 @@ export default function CanvasArea() {
     e.preventDefault();
     e.stopPropagation();
 
+    pushHistory();
+
     const startX = e.clientX;
     const startY = e.clientY;
     const iW = elem.width;
     const iH = elem.height;
     const iX = elem.x;
     const iY = elem.y;
-    const iFS = elem.fontSize ?? 36;   // initial font size
+    const iFS = elem.languageStyles?.[selectedLanguage]?.fontSize ?? elem.fontSize ?? 36;   // initial font size
     const isCorner = ['nw', 'ne', 'sw', 'se'].includes(pos);
 
     const onMove = (mv: MouseEvent) => {
@@ -420,13 +434,25 @@ export default function CanvasArea() {
         const scale = newW / iW;
         const newFontSize = Math.max(6, Math.round(iFS * scale));
 
-        updateElement(elem.id, {
+        const updates: Partial<CanvasElement> = {
           x: Math.round(newX),
           y: Math.round(newY),
           width: Math.round(newW),
           height: Math.round(newH),
           fontSize: newFontSize,
-        });
+        };
+
+        if (elem.languageStyles) {
+          updates.languageStyles = {
+            ...elem.languageStyles,
+            [selectedLanguage]: {
+              ...(elem.languageStyles[selectedLanguage] || {}),
+              fontSize: newFontSize,
+            },
+          };
+        }
+
+        updateElement(elem.id, updates, true);
         return;
       }
 
@@ -459,7 +485,7 @@ export default function CanvasArea() {
           y: Math.round(newY),
           width: Math.round(newW),
           height: Math.round(newH),
-        });
+        }, true);
         return;
       }
 
@@ -476,7 +502,7 @@ export default function CanvasArea() {
         y: Math.round(y),
         width: Math.max(40, Math.round(w)),
         height: Math.max(20, Math.round(h)),
-      });
+      }, true);
     };
 
     const onUp = () => {
@@ -486,7 +512,7 @@ export default function CanvasArea() {
 
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-  }, [displayScale, updateElement]);
+  }, [displayScale, updateElement, selectedLanguage, pushHistory]);
 
   /* ─────────────────────────── ROTATE ─────────────────────────── */
   const handleRotateStart = useCallback((
@@ -495,6 +521,8 @@ export default function CanvasArea() {
   ) => {
     e.preventDefault();
     e.stopPropagation();
+
+    pushHistory();
 
     // Center of element in screen coordinates
     const logicalCanvas = containerRef.current;
@@ -510,7 +538,7 @@ export default function CanvasArea() {
         mv.clientX - centerX
       ) * (180 / Math.PI) + 90; // +90 because 0° = up
 
-      updateElement(elem.id, { rotation: Math.round(angle) });
+      updateElement(elem.id, { rotation: Math.round(angle) }, true);
     };
 
     const onUp = () => {
@@ -520,7 +548,7 @@ export default function CanvasArea() {
 
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-  }, [displayScale, updateElement]);
+  }, [displayScale, updateElement, pushHistory]);
 
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
@@ -756,14 +784,16 @@ export default function CanvasArea() {
                     id={elem.id}
                     onMouseDown={(e) => handleElementMouseDown(e, elem)}
                     onClick={(e) => e.stopPropagation()}
+                    draggable={false}
+                    onDragStart={(e) => e.preventDefault()}
                     style={{
                       position: 'absolute',
-                      left: elem.x,
-                      top: elem.y,
+                      left: 0,
+                      top: 0,
                       width: elem.width,
                       height: isText ? 'auto' : elem.height,
                       minHeight: isText ? undefined : elem.height,
-                      transform: `rotate(${elem.rotation ?? 0}deg)`,
+                      transform: `translate(${elem.x}px, ${elem.y}px) rotate(${elem.rotation ?? 0}deg)`,
                       transformOrigin: 'center',
                       opacity: elem.opacity ?? 1,
                       zIndex: elem.zIndex,
@@ -773,6 +803,9 @@ export default function CanvasArea() {
                       padding: 0,
                       margin: 0,
                       display: isText ? 'inline-block' : 'block',
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none',
+                      MozUserSelect: 'none',
                     }}
                     className={
                       !isSelected && !elem.isLocked
@@ -808,6 +841,9 @@ export default function CanvasArea() {
                               padding: 0,
                               overflow: 'visible',
                               boxSizing: 'border-box',
+                              userSelect: 'none',
+                              WebkitUserSelect: 'none',
+                              MozUserSelect: 'none',
                             }}
                           >
                             {renderFormattedText(displayText, fontFamily)}
@@ -879,14 +915,14 @@ export default function CanvasArea() {
                 <div
                   style={{
                     position: 'absolute',
-                    left: selectedElement.x,
-                    top: selectedElement.y,
+                    left: 0,
+                    top: 0,
                     width: selectedElement.width,
                     height: actualHeight,
-                    transform: `rotate(${selectedElement.rotation ?? 0}deg)`,
+                    transform: `translate(${selectedElement.x}px, ${selectedElement.y}px) rotate(${selectedElement.rotation ?? 0}deg)`,
                     transformOrigin: 'center',
                     overflow: 'visible',
-                    pointerEvents: 'auto',
+                    pointerEvents: 'none',
                   }}
                 >
                   <SelectionOverlay

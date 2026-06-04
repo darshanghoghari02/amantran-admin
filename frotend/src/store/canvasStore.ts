@@ -1572,7 +1572,7 @@ interface CanvasState {
 
   // Element Actions
   addElement: (element: Omit<CanvasElement, 'id' | 'zIndex'>) => void;
-  updateElement: (id: string, updates: Partial<CanvasElement>) => void;
+  updateElement: (id: string, updates: Partial<CanvasElement>, skipHistory?: boolean) => void;
   deleteElement: (id: string) => void;
   duplicateElement: (id: string) => void;
 
@@ -1768,7 +1768,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     triggerAutoSave(get, (p) => set(p as Partial<CanvasState>));
   },
 
-  updateElement: (id, updates) => {
+  updateElement: (id, updates, skipHistory = false) => {
     const { template, selectedPageIndex, pushHistory, selectedLanguage } = get();
     if (!template) return;
 
@@ -1781,7 +1781,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       return; // Block coordinate movements on locked elements
     }
 
-    pushHistory();
+    if (!skipHistory) {
+      pushHistory();
+    }
 
     const pages = [...template.pages];
     const page = pages[selectedPageIndex];

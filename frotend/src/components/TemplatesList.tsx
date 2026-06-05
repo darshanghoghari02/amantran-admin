@@ -18,7 +18,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { Template, Category, CustomFont, Language, User } from '../types';
+import { Template, Category, CustomFont, Language, User, SubscriptionPlan } from '../types';
 import { useToastStore } from '../store/toastStore';
 
 interface TemplatesListProps {
@@ -76,6 +76,8 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
   const [singlePurchasePrice, setSinglePurchasePrice] = useState(49);
   const [includedInMonthlyPlan, setIncludedInMonthlyPlan] = useState(true);
   const [includedInYearlyPlan, setIncludedInYearlyPlan] = useState(true);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
 
   // File Upload State
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -90,22 +92,25 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
   async function fetchInitialData() {
     try {
       const catParam = selectedCatId ? `?categoryId=${selectedCatId}` : '';
-      const [resTpl, resCat, resFont, resLang] = await Promise.all([
+      const [resTpl, resCat, resFont, resLang, resPlans] = await Promise.all([
         fetch(`${API_URL}/api/templates${catParam}`),
         fetch(`${API_URL}/api/categories`),
         fetch(`${API_URL}/api/fonts`),
-        fetch(`${API_URL}/api/languages`)
+        fetch(`${API_URL}/api/languages`),
+        fetch(`${API_URL}/api/subscriptions`)
       ]);
 
       const tplData = await resTpl.json();
       const catData = await resCat.json();
       const fontData = await resFont.json();
       const langData = await resLang.json();
+      const plansData = await resPlans.json();
 
       setTemplates(Array.isArray(tplData) ? tplData : []);
       setCategories(Array.isArray(catData) ? catData : []);
       setFonts(Array.isArray(fontData) ? fontData.filter((f: any) => f.isActive) : []);
       setLanguages(Array.isArray(langData) ? langData.filter((l: any) => l.isActive) : []);
+      setPlans(Array.isArray(plansData) ? plansData : []);
     } catch (error) {
       console.error('Failed to load templates data:', error);
     } finally {
@@ -127,6 +132,12 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
   const handleLangSelect = (lang: string) => {
     setSelectedLangs(prev =>
       prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang]
+    );
+  };
+
+  const handlePlanToggle = (planId: string) => {
+    setSelectedPlanIds(prev =>
+      prev.includes(planId) ? prev.filter(id => id !== planId) : [...prev, planId]
     );
   };
 
@@ -1730,8 +1741,8 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
         fonts: selectedFonts,
         languages: selectedLangs,
         singlePurchasePrice: Number(singlePurchasePrice) || 0,
-        includedInMonthlyPlan,
-        includedInYearlyPlan
+        includedInMonthlyPlan: selectedPlanIds.includes('monthly'),
+        includedInYearlyPlan: selectedPlanIds.includes('yearly')
       } : {
         categoryId,
         name,
@@ -1745,8 +1756,8 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
         languages: selectedLangs,
         pages: initialPages,
         singlePurchasePrice: Number(singlePurchasePrice) || 0,
-        includedInMonthlyPlan,
-        includedInYearlyPlan
+        includedInMonthlyPlan: selectedPlanIds.includes('monthly'),
+        includedInYearlyPlan: selectedPlanIds.includes('yearly')
       };
 
       const url = editingTemplate ? `${API_URL}/api/templates/${editingTemplate.id}` : `${API_URL}/api/templates`;
@@ -1759,6 +1770,36 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
       });
 
       if (res.ok) {
+        const savedTemplate = await res.json();
+        const templateId = savedTemplate.id || (editingTemplate ? editingTemplate.id : null);
+        
+        if (templateId) {
+          // Update the plan inclusions for this template!
+          await Promise.all(plans.map(async (plan) => {
+            const isPlanSelected = selectedPlanIds.includes(plan.id);
+            const currentTemplateIds = plan.includedTemplateIds || [];
+            const isTemplateAlreadyInPlan = currentTemplateIds.includes(templateId);
+            
+            let newTemplateIds = [...currentTemplateIds];
+            if (isPlanSelected && !isTemplateAlreadyInPlan) {
+              newTemplateIds.push(templateId);
+            } else if (!isPlanSelected && isTemplateAlreadyInPlan) {
+              newTemplateIds = newTemplateIds.filter(id => id !== templateId);
+            } else {
+              return;
+            }
+            
+            await fetch(`${API_URL}/api/subscriptions/${plan.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                ...plan,
+                includedTemplateIds: newTemplateIds
+              })
+            });
+          }));
+        }
+
         setIsModalOpen(false);
         setEditingTemplate(null);
         fetchInitialData();
@@ -1866,6 +1907,17 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
     setIncludedInYearlyPlan(tpl.includedInYearlyPlan ?? true);
     setThumbnailFile(null);
     setBgFiles(null);
+
+    const initialSelectedPlans: string[] = [];
+    if (tpl.includedInMonthlyPlan !== false) initialSelectedPlans.push('monthly');
+    if (tpl.includedInYearlyPlan !== false) initialSelectedPlans.push('yearly');
+    plans.forEach(p => {
+      if (p.id !== 'monthly' && p.id !== 'yearly' && p.includedTemplateIds && p.includedTemplateIds.includes(tpl.id)) {
+        initialSelectedPlans.push(p.id);
+      }
+    });
+    setSelectedPlanIds(initialSelectedPlans);
+
     setIsModalOpen(true);
   };
 
@@ -1883,6 +1935,7 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
     setIncludedInYearlyPlan(true);
     setThumbnailFile(null);
     setBgFiles(null);
+    setSelectedPlanIds(['monthly', 'yearly']);
     setIsModalOpen(true);
   };
 
@@ -2044,6 +2097,16 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
                             Yearly
                           </span>
                         )}
+                        {plans.map((p) => {
+                          if (p.id !== 'monthly' && p.id !== 'yearly' && p.includedTemplateIds && p.includedTemplateIds.includes(tpl.id)) {
+                            return (
+                              <span key={p.id} className="flex items-center gap-0.5 px-2 py-0.5 bg-emerald-600 text-white text-[9px] font-extrabold rounded-md uppercase shadow-sm">
+                                {p.name}
+                              </span>
+                            );
+                          }
+                          return null;
+                        })}
                         {tpl.singlePurchasePrice && tpl.singlePurchasePrice > 0 ? (
                           <span className="flex items-center gap-0.5 px-2 py-0.5 bg-amber-600 text-white text-[9px] font-extrabold rounded-md uppercase shadow-sm font-mono">
                             ₹{tpl.singlePurchasePrice}
@@ -2306,7 +2369,7 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
                   
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
                     {/* Single Purchase Price */}
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 sm:col-span-1">
                       <label className="text-[10px] font-bold text-wedding-charcoal-light uppercase tracking-wider block">Single Purchase Price (INR)</label>
                       <div className="relative">
                         <span className="absolute inset-y-0 left-3.5 flex items-center text-gray-500 font-bold text-sm">₹</span>
@@ -2320,38 +2383,31 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
                       </div>
                     </div>
 
-                    {/* Included in Monthly Plan Toggle */}
-                    <div className="space-y-1.5 flex flex-col justify-center">
-                      <label className="text-[10px] font-bold text-wedding-charcoal-light uppercase tracking-wider mb-2 block">Monthly Plan Access</label>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={includedInMonthlyPlan}
-                          onChange={(e) => setIncludedInMonthlyPlan(e.target.checked)}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                        <span className="ml-3 text-xs font-bold text-wedding-charcoal-dark">
-                          {includedInMonthlyPlan ? 'Monthly Included' : 'Excluded'}
-                        </span>
-                      </label>
-                    </div>
-
-                    {/* Included in Yearly Plan Toggle */}
-                    <div className="space-y-1.5 flex flex-col justify-center">
-                      <label className="text-[10px] font-bold text-wedding-charcoal-light uppercase tracking-wider mb-2 block">Yearly Plan Access</label>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={includedInYearlyPlan}
-                          onChange={(e) => setIncludedInYearlyPlan(e.target.checked)}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                        <span className="ml-3 text-xs font-bold text-wedding-charcoal-dark">
-                          {includedInYearlyPlan ? 'Yearly Included' : 'Excluded'}
-                        </span>
-                      </label>
+                    {/* Dynamic Plan Inclusion Checkboxes */}
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-[10px] font-bold text-wedding-charcoal-light uppercase tracking-wider block mb-1">Include in Subscription Plans</label>
+                      <div className="flex gap-2 flex-wrap bg-white p-2.5 border border-wedding-pink-medium/30 rounded-2xl">
+                        {plans.length === 0 ? (
+                          <span className="text-xs text-gray-400 font-medium p-1">No plans available. Add one in Subscription Settings.</span>
+                        ) : (
+                          plans.map((plan) => {
+                            const isChecked = selectedPlanIds.includes(plan.id);
+                            return (
+                              <button
+                                type="button"
+                                key={plan.id}
+                                onClick={() => handlePlanToggle(plan.id)}
+                                className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all border ${isChecked
+                                  ? 'bg-blue-50 border-blue-500 text-blue-700 font-black shadow-xs'
+                                  : 'border-wedding-pink-medium/35 text-wedding-charcoal-light hover:bg-wedding-pink-light/10 bg-white'
+                                  }`}
+                              >
+                                {plan.name}
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

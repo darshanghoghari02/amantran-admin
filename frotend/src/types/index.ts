@@ -76,13 +76,17 @@ export interface Template {
 }
 
 export interface SubscriptionPlan {
-  id: 'monthly' | 'yearly';
+  id: string;
   name: string;
   price: number;
   description: string;
   isActive: boolean;
   includedCategories: string[];
   includedTemplateIds: string[];
+  durationType?: '1day' | 'weekly' | 'monthly' | 'yearly' | 'custom';
+  durationDays?: number;
+  customStartDate?: string | null;
+  customEndDate?: string | null;
 }
 
 export interface CustomFont {
@@ -115,7 +119,7 @@ export interface User {
 export interface UserSubscription {
   id: string;
   userId: string;
-  type: 'monthly' | 'yearly';
+  type: string;
   startDate: string;
   expiryDate: string;
   isActive: boolean;
@@ -154,7 +158,7 @@ export interface Transaction {
   amount: number;
   templateId?: string;
   templateName?: string;
-  planId?: 'monthly' | 'yearly';
+  planId?: string;
   status: 'success' | 'failed' | 'pending';
   timestamp: string;
   createdAt: string;

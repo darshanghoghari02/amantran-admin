@@ -2,7 +2,7 @@
 
 import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Save, Check, RefreshCw, AlertCircle, HelpCircle, Layers, FileText } from 'lucide-react';
+import { Sparkles, Save, Check, RefreshCw, AlertCircle, HelpCircle, Layers, FileText, PlusCircle, Trash2 } from 'lucide-react';
 import { useToastStore } from '../store/toastStore';
 import { Category, Template, SubscriptionPlan } from '../types';
 
@@ -14,21 +14,34 @@ export default function Subscriptions() {
   const [loading, setLoading] = useState(true);
   const [savingPlanId, setSavingPlanId] = useState<string | null>(null);
   const [saveSuccessId, setSaveSuccessId] = useState<string | null>(null);
-  
-  // Local form states
-  const [monthlyName, setMonthlyName] = useState('');
-  const [monthlyPrice, setMonthlyPrice] = useState(99);
-  const [monthlyDesc, setMonthlyDesc] = useState('');
-  const [monthlyActive, setMonthlyActive] = useState(true);
-  const [monthlyCats, setMonthlyCats] = useState<string[]>([]);
-  const [monthlyTpls, setMonthlyTpls] = useState<string[]>([]);
 
-  const [yearlyName, setYearlyName] = useState('');
-  const [yearlyPrice, setYearlyPrice] = useState(499);
-  const [yearlyDesc, setYearlyDesc] = useState('');
-  const [yearlyActive, setYearlyActive] = useState(true);
-  const [yearlyCats, setYearlyCats] = useState<string[]>([]);
-  const [yearlyTpls, setYearlyTpls] = useState<string[]>([]);
+  // Dynamic form state
+  const [editStates, setEditStates] = useState<Record<string, {
+    name: string;
+    price: number;
+    description: string;
+    isActive: boolean;
+    includedCategories: string[];
+    includedTemplateIds: string[];
+    durationType: '1day' | 'weekly' | 'monthly' | 'yearly' | 'custom';
+    durationDays: number;
+    customStartDate: string | null;
+    customEndDate: string | null;
+  }>>({});
+
+  // Modal states for creating a new plan
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newPlanName, setNewPlanName] = useState('');
+  const [newPlanPrice, setNewPlanPrice] = useState(0);
+  const [newPlanDesc, setNewPlanDesc] = useState('');
+  const [newPlanActive, setNewPlanActive] = useState(true);
+  const [newPlanCats, setNewPlanCats] = useState<string[]>([]);
+  const [newPlanTpls, setNewPlanTpls] = useState<string[]>([]);
+  const [newPlanDurationType, setNewPlanDurationType] = useState<'1day' | 'weekly' | 'monthly' | 'yearly' | 'custom'>('monthly');
+  const [newPlanDurationDays, setNewPlanDurationDays] = useState(30);
+  const [newPlanCustomStartDate, setNewPlanCustomStartDate] = useState('');
+  const [newPlanCustomEndDate, setNewPlanCustomEndDate] = useState('');
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     fetchInitialData();
@@ -46,30 +59,28 @@ export default function Subscriptions() {
       const catsData = await resCats.json();
       const tplsData = await resTpls.json();
 
-      setPlans(Array.isArray(plansData) ? plansData : []);
+      const loadedPlans = Array.isArray(plansData) ? plansData : [];
+      setPlans(loadedPlans);
       setCategories(Array.isArray(catsData) ? catsData : []);
       setTemplates(Array.isArray(tplsData) ? tplsData : []);
 
-      // Initialize form states
-      const mPlan = plansData.find((p: any) => p.id === 'monthly');
-      if (mPlan) {
-        setMonthlyName(mPlan.name || 'Monthly Premium');
-        setMonthlyPrice(mPlan.price || 99);
-        setMonthlyDesc(mPlan.description || '');
-        setMonthlyActive(mPlan.isActive !== false);
-        setMonthlyCats(mPlan.includedCategories || []);
-        setMonthlyTpls(mPlan.includedTemplateIds || []);
-      }
-
-      const yPlan = plansData.find((p: any) => p.id === 'yearly');
-      if (yPlan) {
-        setYearlyName(yPlan.name || 'Yearly Premium');
-        setYearlyPrice(yPlan.price || 499);
-        setYearlyDesc(yPlan.description || '');
-        setYearlyActive(yPlan.isActive !== false);
-        setYearlyCats(yPlan.includedCategories || []);
-        setYearlyTpls(yPlan.includedTemplateIds || []);
-      }
+      // Initialize edit states for each plan
+      const initialEditStates: typeof editStates = {};
+      loadedPlans.forEach((plan: SubscriptionPlan) => {
+        initialEditStates[plan.id] = {
+          name: plan.name || '',
+          price: plan.price || 0,
+          description: plan.description || '',
+          isActive: plan.isActive !== false,
+          includedCategories: plan.includedCategories || [],
+          includedTemplateIds: plan.includedTemplateIds || [],
+          durationType: plan.durationType || 'monthly',
+          durationDays: plan.durationDays !== undefined ? plan.durationDays : 30,
+          customStartDate: plan.customStartDate || null,
+          customEndDate: plan.customEndDate || null
+        };
+      });
+      setEditStates(initialEditStates);
     } catch (error) {
       console.error('Failed to load subscription settings:', error);
     } finally {
@@ -77,25 +88,57 @@ export default function Subscriptions() {
     }
   }
 
-  const handleSavePlan = async (planId: 'monthly' | 'yearly') => {
-    setSavingPlanId(planId);
-    
-    const payload = planId === 'monthly' ? {
-      name: monthlyName,
-      price: monthlyPrice,
-      description: monthlyDesc,
-      isActive: monthlyActive,
-      includedCategories: monthlyCats,
-      includedTemplateIds: monthlyTpls
-    } : {
-      name: yearlyName,
-      price: yearlyPrice,
-      description: yearlyDesc,
-      isActive: yearlyActive,
-      includedCategories: yearlyCats,
-      includedTemplateIds: yearlyTpls
-    };
+  const handleFieldChange = (planId: string, field: string, value: any) => {
+    setEditStates(prev => ({
+      ...prev,
+      [planId]: {
+        ...prev[planId],
+        [field]: value
+      }
+    }));
+  };
 
+  const toggleCategoryInclusion = (planId: string, catId: string) => {
+    setEditStates(prev => {
+      const state = prev[planId];
+      if (!state) return prev;
+      const currentCats = state.includedCategories || [];
+      const newCats = currentCats.includes(catId)
+        ? currentCats.filter(c => c !== catId)
+        : [...currentCats, catId];
+      return {
+        ...prev,
+        [planId]: {
+          ...state,
+          includedCategories: newCats
+        }
+      };
+    });
+  };
+
+  const toggleTemplateInclusion = (planId: string, tplId: string) => {
+    setEditStates(prev => {
+      const state = prev[planId];
+      if (!state) return prev;
+      const currentTpls = state.includedTemplateIds || [];
+      const newTpls = currentTpls.includes(tplId)
+        ? currentTpls.filter(t => t !== tplId)
+        : [...currentTpls, tplId];
+      return {
+        ...prev,
+        [planId]: {
+          ...state,
+          includedTemplateIds: newTpls
+        }
+      };
+    });
+  };
+
+  const handleSavePlan = async (planId: string) => {
+    const payload = editStates[planId];
+    if (!payload) return;
+
+    setSavingPlanId(planId);
     try {
       const res = await fetch(`${API_URL}/api/subscriptions/${planId}`, {
         method: 'PUT',
@@ -107,9 +150,10 @@ export default function Subscriptions() {
         setSaveSuccessId(planId);
         setTimeout(() => setSaveSuccessId(null), 3000);
         useToastStore.getState().addToast(
-          `${planId === 'monthly' ? 'Monthly' : 'Yearly'} subscription properties saved successfully!`,
+          `Subscription plan settings saved successfully!`,
           'success'
         );
+        fetchInitialData();
       } else {
         useToastStore.getState().addToast('Failed to save subscription properties.', 'error');
       }
@@ -121,28 +165,92 @@ export default function Subscriptions() {
     }
   };
 
-  const toggleCategoryInclusion = (planId: 'monthly' | 'yearly', catId: string) => {
-    if (planId === 'monthly') {
-      setMonthlyCats(prev => 
-        prev.includes(catId) ? prev.filter(c => c !== catId) : [...prev, catId]
-      );
-    } else {
-      setYearlyCats(prev => 
-        prev.includes(catId) ? prev.filter(c => c !== catId) : [...prev, catId]
-      );
+  const handleCreatePlan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPlanName) {
+      useToastStore.getState().addToast('Plan name is required.', 'warning');
+      return;
+    }
+
+    setCreating(true);
+    const payload = {
+      name: newPlanName,
+      price: newPlanPrice,
+      description: newPlanDesc,
+      isActive: newPlanActive,
+      includedCategories: newPlanCats,
+      includedTemplateIds: newPlanTpls,
+      durationType: newPlanDurationType,
+      durationDays: newPlanDurationDays,
+      customStartDate: newPlanDurationType === 'custom' ? newPlanCustomStartDate : null,
+      customEndDate: newPlanDurationType === 'custom' ? newPlanCustomEndDate : null
+    };
+
+    try {
+      const res = await fetch(`${API_URL}/api/subscriptions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        useToastStore.getState().addToast('Subscription plan created successfully!', 'success');
+        setIsModalOpen(false);
+        // Clear form
+        setNewPlanName('');
+        setNewPlanPrice(0);
+        setNewPlanDesc('');
+        setNewPlanActive(true);
+        setNewPlanCats([]);
+        setNewPlanTpls([]);
+        setNewPlanDurationType('monthly');
+        setNewPlanDurationDays(30);
+        setNewPlanCustomStartDate('');
+        setNewPlanCustomEndDate('');
+        fetchInitialData();
+      } else {
+        const err = await res.json();
+        useToastStore.getState().addToast(err.error || 'Failed to create plan', 'error');
+      }
+    } catch (error) {
+      console.error('Create plan error:', error);
+      useToastStore.getState().addToast('Network error. Failed to create plan.', 'error');
+    } finally {
+      setCreating(false);
     }
   };
 
-  const toggleTemplateInclusion = (planId: 'monthly' | 'yearly', tplId: string) => {
-    if (planId === 'monthly') {
-      setMonthlyTpls(prev => 
-        prev.includes(tplId) ? prev.filter(t => t !== tplId) : [...prev, tplId]
-      );
-    } else {
-      setYearlyTpls(prev => 
-        prev.includes(tplId) ? prev.filter(t => t !== tplId) : [...prev, tplId]
-      );
+  const handleDeletePlan = async (planId: string, planName: string) => {
+    if (!confirm(`Are you sure you want to delete the "${planName}" subscription plan?`)) return;
+
+    try {
+      const res = await fetch(`${API_URL}/api/subscriptions/${planId}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        useToastStore.getState().addToast(`Subscription plan "${planName}" deleted successfully!`, 'success');
+        fetchInitialData();
+      } else {
+        const err = await res.json();
+        useToastStore.getState().addToast(err.error || 'Failed to delete plan', 'error');
+      }
+    } catch (error) {
+      console.error('Delete plan error:', error);
+      useToastStore.getState().addToast('Network error. Failed to delete plan.', 'error');
     }
+  };
+
+  const toggleNewPlanCategory = (catId: string) => {
+    setNewPlanCats(prev =>
+      prev.includes(catId) ? prev.filter(c => c !== catId) : [...prev, catId]
+    );
+  };
+
+  const toggleNewPlanTemplate = (tplId: string) => {
+    setNewPlanTpls(prev =>
+      prev.includes(tplId) ? prev.filter(t => t !== tplId) : [...prev, tplId]
+    );
   };
 
   if (loading) {
@@ -174,9 +282,16 @@ export default function Subscriptions() {
             Premium Paywall Configuration
           </h3>
           <p className="text-xs text-gray-300 max-w-2xl font-medium leading-relaxed">
-            Configure monthly & yearly premium membership details. Define paywall gates by setting category-wide overrides or selecting specific individual templates included under each subscription package.
+            Configure premium membership details. Define paywall gates by setting category-wide overrides or selecting specific individual templates included under each subscription package.
           </p>
         </div>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-xs font-extrabold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 whitespace-nowrap"
+        >
+          <PlusCircle className="w-5 h-5" />
+          Create Plan
+        </button>
       </div>
 
       {/* Quick Statistics Summary */}
@@ -213,310 +328,460 @@ export default function Subscriptions() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* ==================== MONTHLY PREMIUM CARD ==================== */}
-        <div className="bg-white border border-wedding-pink-medium/40 rounded-3xl shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden flex flex-col justify-between">
-          <div className="p-6 sm:p-8 space-y-6">
-            {/* Plan Header */}
-            <div className="flex justify-between items-center pb-4 border-b border-wedding-pink-medium/20">
-              <div>
-                <h4 className="text-lg font-black text-wedding-charcoal-dark tracking-tight">Monthly Premium Plan</h4>
-                <p className="text-xs text-gray-400 font-mono mt-0.5">plan_id: monthly</p>
-              </div>
-              <span className="px-3 py-1 bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-black rounded-lg uppercase tracking-wider">
-                Monthly Pass
-              </span>
-            </div>
+        {plans.map((plan) => {
+          const editState = editStates[plan.id] || {
+            name: plan.name || '',
+            price: plan.price || 0,
+            description: plan.description || '',
+            isActive: plan.isActive !== false,
+            includedCategories: plan.includedCategories || [],
+            includedTemplateIds: plan.includedTemplateIds || [],
+            durationType: plan.durationType || 'monthly',
+            durationDays: plan.durationDays !== undefined ? plan.durationDays : 30,
+            customStartDate: plan.customStartDate || null,
+            customEndDate: plan.customEndDate || null
+          };
 
-            {/* Config Fields */}
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Plan Title</label>
-                  <input
-                    type="text"
-                    value={monthlyName}
-                    onChange={(e) => setMonthlyName(e.target.value)}
-                    placeholder="e.g. Monthly Premium"
-                    className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 focus:bg-white font-medium transition-all"
-                  />
-                </div>
+          const isDefault = plan.id === 'monthly' || plan.id === 'yearly';
+          const planBadgeColor = plan.id === 'monthly' 
+            ? 'bg-blue-50 border-blue-200 text-blue-700' 
+            : plan.id === 'yearly'
+            ? 'bg-purple-50 border-purple-200 text-purple-700'
+            : 'bg-emerald-50 border-emerald-200 text-emerald-700';
+            
+          const planBadgeText = plan.id === 'monthly'
+            ? 'Monthly Pass'
+            : plan.id === 'yearly'
+            ? 'Yearly Pass'
+            : 'Custom Plan';
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Price (₹ / month)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={monthlyPrice}
-                    onChange={(e) => setMonthlyPrice(Number(e.target.value))}
-                    className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 focus:bg-white font-bold transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Description</label>
-                <textarea
-                  value={monthlyDesc}
-                  onChange={(e) => setMonthlyDesc(e.target.value)}
-                  placeholder="Plan features summary..."
-                  rows={2}
-                  className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 focus:bg-white transition-all resize-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-3.5 bg-gray-50 border border-wedding-pink-medium/20 rounded-2xl">
-                <div>
-                  <h5 className="text-xs font-black text-wedding-charcoal-dark uppercase tracking-wider">Plan Accessibility</h5>
-                  <p className="text-[10px] text-gray-500 font-semibold mt-0.5">Toggle plan availability on active devices</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={monthlyActive}
-                    onChange={(e) => setMonthlyActive(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-wedding-pink-dark"></div>
-                  <span className="ml-3 text-xs font-bold text-wedding-charcoal-dark">
-                    {monthlyActive ? 'Active' : 'Disabled'}
+          return (
+            <div key={plan.id} className="bg-white border border-wedding-pink-medium/40 rounded-3xl shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden flex flex-col justify-between">
+              <div className="p-6 sm:p-8 space-y-6">
+                {/* Plan Header */}
+                <div className="flex justify-between items-center pb-4 border-b border-wedding-pink-medium/20">
+                  <div>
+                    <h4 className="text-lg font-black text-wedding-charcoal-dark tracking-tight">{editState.name}</h4>
+                    <p className="text-xs text-gray-400 font-mono mt-0.5">plan_id: {plan.id}</p>
+                  </div>
+                  <span className={`px-3 py-1 border text-[10px] font-black rounded-lg uppercase tracking-wider ${planBadgeColor}`}>
+                    {planBadgeText}
                   </span>
-                </label>
-              </div>
+                </div>
 
-              {/* Inclusions Accordion */}
-              <div className="space-y-4 pt-4 border-t border-wedding-pink-medium/10">
-                <h5 className="text-xs font-black text-wedding-charcoal-dark uppercase tracking-wider flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-wedding-pink-dark" />
-                  Included Template Categories
-                </h5>
-                <div className="flex gap-2 flex-wrap bg-gray-50/50 p-4 border border-wedding-pink-medium/15 rounded-2xl max-h-[140px] overflow-y-auto">
-                  {categories.map((cat) => {
-                    const isChecked = monthlyCats.includes(cat.id);
-                    return (
-                      <button
-                        type="button"
-                        key={cat.id}
-                        onClick={() => toggleCategoryInclusion('monthly', cat.id)}
-                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${isChecked
-                          ? 'bg-blue-50 border-blue-500 text-blue-700 font-black shadow-xs'
-                          : 'border-wedding-pink-medium/35 bg-white text-wedding-charcoal-light hover:bg-wedding-pink-light/10'
-                          }`}
+                {/* Config Fields */}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Plan Title</label>
+                      <input
+                        type="text"
+                        value={editState.name}
+                        onChange={(e) => handleFieldChange(plan.id, 'name', e.target.value)}
+                        placeholder="e.g. Monthly Premium"
+                        className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 focus:bg-white font-medium transition-all"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Price (₹ / billing cycle)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editState.price}
+                        onChange={(e) => handleFieldChange(plan.id, 'price', Number(e.target.value))}
+                        className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 focus:bg-white font-bold transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Duration Type</label>
+                      <select
+                        value={editState.durationType || 'monthly'}
+                        onChange={(e) => {
+                          const val = e.target.value as any;
+                          let days = 30;
+                          if (val === '1day') days = 1;
+                          else if (val === 'weekly') days = 7;
+                          else if (val === 'monthly') days = 30;
+                          else if (val === 'yearly') days = 365;
+                          else if (val === 'custom') days = 0;
+                          
+                          setEditStates(prev => ({
+                            ...prev,
+                            [plan.id]: {
+                              ...prev[plan.id],
+                              durationType: val,
+                              durationDays: days
+                            }
+                          }));
+                        }}
+                        className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 focus:bg-white font-medium transition-all"
                       >
-                        {cat.name}
-                      </button>
-                    );
-                  })}
-                </div>
+                        <option value="1day">1 Day</option>
+                        <option value="weekly">Weekly (7 Days)</option>
+                        <option value="monthly">Monthly (30 Days)</option>
+                        <option value="yearly">Yearly (365 Days)</option>
+                        <option value="custom">Custom (Fixed Dates)</option>
+                      </select>
+                    </div>
 
-                <h5 className="text-xs font-black text-wedding-charcoal-dark uppercase tracking-wider flex items-center gap-1.5 pt-2">
-                  <FileText className="w-4 h-4 text-wedding-pink-dark" />
-                  Included Specific Premium Templates
-                </h5>
-                <div className="flex gap-2 flex-wrap bg-gray-50/50 p-4 border border-wedding-pink-medium/15 rounded-2xl max-h-[160px] overflow-y-auto">
-                  {templates.filter(t => t.isPremium).map((tpl) => {
-                    const isChecked = monthlyTpls.includes(tpl.id);
-                    return (
-                      <button
-                        type="button"
-                        key={tpl.id}
-                        onClick={() => toggleTemplateInclusion('monthly', tpl.id)}
-                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${isChecked
-                          ? 'bg-blue-50 border-blue-500 text-blue-700 font-black shadow-xs'
-                          : 'border-wedding-pink-medium/35 bg-white text-wedding-charcoal-light hover:bg-wedding-pink-light/10'
-                          }`}
-                      >
-                        {tpl.name}
-                      </button>
-                    );
-                  })}
+                    <div className="space-y-1.5 flex flex-col justify-end">
+                      <div className="px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/20 text-wedding-charcoal-light text-sm font-semibold">
+                        Duration: {editState.durationType === 'custom' ? 'Defined by dates' : `${editState.durationDays || 30} days`}
+                      </div>
+                    </div>
+                  </div>
+
+                  {editState.durationType === 'custom' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Start Date</label>
+                        <input
+                          type="date"
+                          value={editState.customStartDate ? editState.customStartDate.substring(0, 10) : ''}
+                          onChange={(e) => handleFieldChange(plan.id, 'customStartDate', e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 focus:bg-white font-medium transition-all"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">End Date</label>
+                        <input
+                          type="date"
+                          value={editState.customEndDate ? editState.customEndDate.substring(0, 10) : ''}
+                          onChange={(e) => handleFieldChange(plan.id, 'customEndDate', e.target.value)}
+                          className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 focus:bg-white font-medium transition-all"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Description</label>
+                    <textarea
+                      value={editState.description}
+                      onChange={(e) => handleFieldChange(plan.id, 'description', e.target.value)}
+                      placeholder="Plan features summary..."
+                      rows={2}
+                      className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 focus:bg-white transition-all resize-none"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-3.5 bg-gray-50 border border-wedding-pink-medium/20 rounded-2xl">
+                    <div>
+                      <h5 className="text-xs font-black text-wedding-charcoal-dark uppercase tracking-wider">Plan Accessibility</h5>
+                      <p className="text-[10px] text-gray-500 font-semibold mt-0.5">Toggle plan availability on active devices</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editState.isActive}
+                        onChange={(e) => handleFieldChange(plan.id, 'isActive', e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-wedding-pink-dark"></div>
+                      <span className="ml-3 text-xs font-bold text-wedding-charcoal-dark">
+                        {editState.isActive ? 'Active' : 'Disabled'}
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Inclusions Accordion */}
+                  <div className="space-y-4 pt-4 border-t border-wedding-pink-medium/10">
+                    <h5 className="text-xs font-black text-wedding-charcoal-dark uppercase tracking-wider flex items-center gap-1.5">
+                      <Layers className="w-4 h-4 text-wedding-pink-dark" />
+                      Included Template Categories
+                    </h5>
+                    <div className="flex gap-2 flex-wrap bg-gray-50/50 p-4 border border-wedding-pink-medium/15 rounded-2xl max-h-[140px] overflow-y-auto">
+                      {categories.map((cat) => {
+                        const isChecked = editState.includedCategories.includes(cat.id);
+                        return (
+                          <button
+                            type="button"
+                            key={cat.id}
+                            onClick={() => toggleCategoryInclusion(plan.id, cat.id)}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${isChecked
+                              ? 'bg-blue-50 border-blue-500 text-blue-700 font-black shadow-xs'
+                              : 'border-wedding-pink-medium/35 bg-white text-wedding-charcoal-light hover:bg-wedding-pink-light/10'
+                              }`}
+                          >
+                            {cat.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <h5 className="text-xs font-black text-wedding-charcoal-dark uppercase tracking-wider flex items-center gap-1.5 pt-2">
+                      <FileText className="w-4 h-4 text-wedding-pink-dark" />
+                      Included Specific Premium Templates
+                    </h5>
+                    <div className="flex gap-2 flex-wrap bg-gray-50/50 p-4 border border-wedding-pink-medium/15 rounded-2xl max-h-[160px] overflow-y-auto">
+                      {templates.filter(t => t.isPremium).map((tpl) => {
+                        const isChecked = editState.includedTemplateIds.includes(tpl.id);
+                        return (
+                          <button
+                            type="button"
+                            key={tpl.id}
+                            onClick={() => toggleTemplateInclusion(plan.id, tpl.id)}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${isChecked
+                              ? 'bg-blue-50 border-blue-500 text-blue-700 font-black shadow-xs'
+                              : 'border-wedding-pink-medium/35 bg-white text-wedding-charcoal-light hover:bg-wedding-pink-light/10'
+                              }`}
+                          >
+                            {tpl.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
+              </div>
+
+              {/* Action Footer */}
+              <div className="bg-gray-50 p-6 border-t border-wedding-pink-medium/20 flex items-center justify-between">
+                  <button
+                    onClick={() => handleDeletePlan(plan.id, editState.name)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded-xl shadow-xs transition-all duration-200"
+                    title="Delete this plan"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete Plan
+                  </button>
+                
+                <button
+                  onClick={() => handleSavePlan(plan.id)}
+                  disabled={savingPlanId === plan.id}
+                  className="flex items-center gap-2 px-5 py-3 bg-wedding-charcoal-dark hover:bg-wedding-charcoal-light text-wedding-gold-light hover:text-white text-xs font-extrabold rounded-2xl shadow transition-all duration-300 disabled:opacity-50"
+                >
+                  {savingPlanId === plan.id ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : saveSuccessId === plan.id ? (
+                    <>
+                      <Check className="w-4 h-4 text-green-400 stroke-[3]" />
+                      Saved!
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 text-wedding-pink-medium" />
+                      Save settings
+                    </>
+                  )}
+                </button>
               </div>
             </div>
-          </div>
-
-          {/* Action Footer */}
-          <div className="bg-gray-50 p-6 border-t border-wedding-pink-medium/20 flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-bold uppercase tracking-wider">
-              <AlertCircle className="w-4 h-4 text-gray-400" />
-              Assigns paywall inclusions instantly
-            </div>
-            <button
-              onClick={() => handleSavePlan('monthly')}
-              disabled={savingPlanId === 'monthly'}
-              className="flex items-center gap-2 px-5 py-3 bg-wedding-charcoal-dark hover:bg-wedding-charcoal-light text-wedding-gold-light hover:text-white text-xs font-extrabold rounded-2xl shadow transition-all duration-300 disabled:opacity-50"
-            >
-              {savingPlanId === 'monthly' ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Saving...
-                </>
-              ) : saveSuccessId === 'monthly' ? (
-                <>
-                  <Check className="w-4 h-4 text-green-400 stroke-[3]" />
-                  Saved!
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 text-wedding-pink-medium" />
-                  Save Monthly settings
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* ==================== YEARLY PREMIUM CARD ==================== */}
-        <div className="bg-white border border-wedding-pink-medium/40 rounded-3xl shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden flex flex-col justify-between">
-          <div className="p-6 sm:p-8 space-y-6">
-            {/* Plan Header */}
-            <div className="flex justify-between items-center pb-4 border-b border-wedding-pink-medium/20">
-              <div>
-                <h4 className="text-lg font-black text-wedding-charcoal-dark tracking-tight">Yearly Premium Plan</h4>
-                <p className="text-xs text-gray-400 font-mono mt-0.5">plan_id: yearly</p>
-              </div>
-              <span className="px-3 py-1 bg-purple-50 border border-purple-200 text-purple-700 text-[10px] font-black rounded-lg uppercase tracking-wider">
-                Yearly Pass
-              </span>
-            </div>
-
-            {/* Config Fields */}
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Plan Title</label>
-                  <input
-                    type="text"
-                    value={yearlyName}
-                    onChange={(e) => setYearlyName(e.target.value)}
-                    placeholder="e.g. Yearly Premium"
-                    className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 focus:bg-white font-medium transition-all"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Price (₹ / year)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={yearlyPrice}
-                    onChange={(e) => setYearlyPrice(Number(e.target.value))}
-                    className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 focus:bg-white font-bold transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Description</label>
-                <textarea
-                  value={yearlyDesc}
-                  onChange={(e) => setYearlyDesc(e.target.value)}
-                  placeholder="Plan features summary..."
-                  rows={2}
-                  className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 focus:bg-white transition-all resize-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-3.5 bg-gray-50 border border-wedding-pink-medium/20 rounded-2xl">
-                <div>
-                  <h5 className="text-xs font-black text-wedding-charcoal-dark uppercase tracking-wider">Plan Accessibility</h5>
-                  <p className="text-[10px] text-gray-500 font-semibold mt-0.5">Toggle plan availability on active devices</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={yearlyActive}
-                    onChange={(e) => setYearlyActive(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-wedding-pink-dark"></div>
-                  <span className="ml-3 text-xs font-bold text-wedding-charcoal-dark">
-                    {yearlyActive ? 'Active' : 'Disabled'}
-                  </span>
-                </label>
-              </div>
-
-              {/* Inclusions Accordion */}
-              <div className="space-y-4 pt-4 border-t border-wedding-pink-medium/10">
-                <h5 className="text-xs font-black text-wedding-charcoal-dark uppercase tracking-wider flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-wedding-pink-dark" />
-                  Included Template Categories
-                </h5>
-                <div className="flex gap-2 flex-wrap bg-gray-50/50 p-4 border border-wedding-pink-medium/15 rounded-2xl max-h-[140px] overflow-y-auto">
-                  {categories.map((cat) => {
-                    const isChecked = yearlyCats.includes(cat.id);
-                    return (
-                      <button
-                        type="button"
-                        key={cat.id}
-                        onClick={() => toggleCategoryInclusion('yearly', cat.id)}
-                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${isChecked
-                          ? 'bg-purple-50 border-purple-500 text-purple-700 font-black shadow-xs'
-                          : 'border-wedding-pink-medium/35 bg-white text-wedding-charcoal-light hover:bg-wedding-pink-light/10'
-                          }`}
-                      >
-                        {cat.name}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <h5 className="text-xs font-black text-wedding-charcoal-dark uppercase tracking-wider flex items-center gap-1.5 pt-2">
-                  <FileText className="w-4 h-4 text-wedding-pink-dark" />
-                  Included Specific Premium Templates
-                </h5>
-                <div className="flex gap-2 flex-wrap bg-gray-50/50 p-4 border border-wedding-pink-medium/15 rounded-2xl max-h-[160px] overflow-y-auto">
-                  {templates.filter(t => t.isPremium).map((tpl) => {
-                    const isChecked = yearlyTpls.includes(tpl.id);
-                    return (
-                      <button
-                        type="button"
-                        key={tpl.id}
-                        onClick={() => toggleTemplateInclusion('yearly', tpl.id)}
-                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${isChecked
-                          ? 'bg-purple-50 border-purple-500 text-purple-700 font-black shadow-xs'
-                          : 'border-wedding-pink-medium/35 bg-white text-wedding-charcoal-light hover:bg-wedding-pink-light/10'
-                          }`}
-                      >
-                        {tpl.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Footer */}
-          <div className="bg-gray-50 p-6 border-t border-wedding-pink-medium/20 flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-bold uppercase tracking-wider">
-              <AlertCircle className="w-4 h-4 text-gray-400" />
-              Assigns paywall inclusions instantly
-            </div>
-            <button
-              onClick={() => handleSavePlan('yearly')}
-              disabled={savingPlanId === 'yearly'}
-              className="flex items-center gap-2 px-5 py-3 bg-wedding-charcoal-dark hover:bg-wedding-charcoal-light text-wedding-gold-light hover:text-white text-xs font-extrabold rounded-2xl shadow transition-all duration-300 disabled:opacity-50"
-            >
-              {savingPlanId === 'yearly' ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Saving...
-                </>
-              ) : saveSuccessId === 'yearly' ? (
-                <>
-                  <Check className="w-4 h-4 text-green-400 stroke-[3]" />
-                  Saved!
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 text-wedding-pink-medium" />
-                  Save Yearly settings
-                </>
-              )}
-            </button>
-          </div>
-        </div>
+          );
+        })}
       </div>
+
+      {/* Create Plan Overlay Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-wedding-charcoal-dark/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-wedding-bg border border-wedding-pink-medium/40 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-slideUp max-h-[90vh] flex flex-col">
+            <div className="p-6 bg-wedding-charcoal-dark text-white flex justify-between items-center">
+              <h4 className="font-bold text-lg text-wedding-gold-light">
+                Create New Subscription Plan
+              </h4>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-400 hover:text-white font-bold text-sm bg-wedding-charcoal-light px-3 py-1.5 rounded-xl transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <form onSubmit={handleCreatePlan} className="p-6 space-y-5 overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Plan Name */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Plan Title</label>
+                  <input 
+                    type="text" 
+                    value={newPlanName}
+                    onChange={(e) => setNewPlanName(e.target.value)}
+                    placeholder="e.g. Quarterly Premium"
+                    className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
+                  />
+                </div>
+
+                {/* Plan Price */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Price (₹)</label>
+                  <input 
+                    type="number" 
+                    min="0"
+                    value={newPlanPrice}
+                    onChange={(e) => setNewPlanPrice(Number(e.target.value))}
+                    className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Duration Type */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Duration Type</label>
+                  <select 
+                    value={newPlanDurationType}
+                    onChange={(e) => {
+                      const val = e.target.value as any;
+                      setNewPlanDurationType(val);
+                      let days = 30;
+                      if (val === '1day') days = 1;
+                      else if (val === 'weekly') days = 7;
+                      else if (val === 'monthly') days = 30;
+                      else if (val === 'yearly') days = 365;
+                      else if (val === 'custom') days = 0;
+                      setNewPlanDurationDays(days);
+                    }}
+                    className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 font-medium"
+                  >
+                    <option value="1day">1 Day</option>
+                    <option value="weekly">Weekly (7 Days)</option>
+                    <option value="monthly">Monthly (30 Days)</option>
+                    <option value="yearly">Yearly (365 Days)</option>
+                    <option value="custom">Custom (Fixed Dates)</option>
+                  </select>
+                </div>
+                {/* Duration Days display */}
+                <div className="space-y-1.5 flex flex-col justify-end">
+                  <div className="px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/20 text-wedding-charcoal-light text-sm font-semibold">
+                    Duration: {newPlanDurationType === 'custom' ? 'Defined by dates' : `${newPlanDurationDays} days`}
+                  </div>
+                </div>
+              </div>
+
+              {newPlanDurationType === 'custom' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Start Date */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Start Date</label>
+                    <input 
+                      type="date" 
+                      value={newPlanCustomStartDate}
+                      onChange={(e) => setNewPlanCustomStartDate(e.target.value)}
+                      className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
+                    />
+                  </div>
+                  {/* End Date */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">End Date</label>
+                    <input 
+                      type="date" 
+                      value={newPlanCustomEndDate}
+                      onChange={(e) => setNewPlanCustomEndDate(e.target.value)}
+                      className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Description */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Description</label>
+                <textarea 
+                  value={newPlanDesc}
+                  onChange={(e) => setNewPlanDesc(e.target.value)}
+                  placeholder="Plan features summary..."
+                  rows={2}
+                  className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 resize-none"
+                />
+              </div>
+
+              {/* Accessibility */}
+              <div className="flex items-center justify-between p-3.5 bg-gray-50 border border-wedding-pink-medium/20 rounded-2xl">
+                <div>
+                  <h5 className="text-xs font-black text-wedding-charcoal-dark uppercase tracking-wider">Plan Accessibility</h5>
+                  <p className="text-[10px] text-gray-500 font-semibold mt-0.5">Toggle plan availability on active devices</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={newPlanActive}
+                    onChange={(e) => setNewPlanActive(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-wedding-pink-dark"></div>
+                  <span className="ml-3 text-sm font-semibold text-wedding-charcoal-dark">
+                    {newPlanActive ? 'Active' : 'Disabled'}
+                  </span>
+                </label>
+              </div>
+
+              {/* Inclusions */}
+              <div className="space-y-4 pt-4 border-t border-wedding-pink-medium/10">
+                <h5 className="text-xs font-black text-wedding-charcoal-dark uppercase tracking-wider flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-wedding-pink-dark" />
+                  Included Template Categories
+                </h5>
+                <div className="flex gap-2 flex-wrap bg-gray-50/50 p-4 border border-wedding-pink-medium/15 rounded-2xl max-h-[120px] overflow-y-auto">
+                  {categories.map((cat) => {
+                    const isChecked = newPlanCats.includes(cat.id);
+                    return (
+                      <button
+                        type="button"
+                        key={cat.id}
+                        onClick={() => toggleNewPlanCategory(cat.id)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${isChecked
+                          ? 'bg-blue-50 border-blue-500 text-blue-700 font-black shadow-xs'
+                          : 'border-wedding-pink-medium/35 bg-white text-wedding-charcoal-light hover:bg-wedding-pink-light/10'
+                          }`}
+                      >
+                        {cat.name}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <h5 className="text-xs font-black text-wedding-charcoal-dark uppercase tracking-wider flex items-center gap-1.5 pt-2">
+                  <FileText className="w-4 h-4 text-wedding-pink-dark" />
+                  Included Specific Premium Templates
+                </h5>
+                <div className="flex gap-2 flex-wrap bg-gray-50/50 p-4 border border-wedding-pink-medium/15 rounded-2xl max-h-[140px] overflow-y-auto">
+                  {templates.filter(t => t.isPremium).map((tpl) => {
+                    const isChecked = newPlanTpls.includes(tpl.id);
+                    return (
+                      <button
+                        type="button"
+                        key={tpl.id}
+                        onClick={() => toggleNewPlanTemplate(tpl.id)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${isChecked
+                          ? 'bg-blue-50 border-blue-500 text-blue-700 font-black shadow-xs'
+                          : 'border-wedding-pink-medium/35 bg-white text-wedding-charcoal-light hover:bg-wedding-pink-light/10'
+                          }`}
+                      >
+                        {tpl.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="pt-4 border-t border-wedding-pink-medium/20 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-5 py-3 rounded-2xl bg-gray-100 text-wedding-charcoal-light hover:bg-gray-200 text-sm font-bold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="px-6 py-3 rounded-2xl bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-sm font-bold shadow-lg transition-all disabled:opacity-50"
+                >
+                  {creating ? 'Creating...' : 'Create Plan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

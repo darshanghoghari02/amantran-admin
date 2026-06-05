@@ -68,7 +68,11 @@ router.put('/:id', async (req, res) => {
       description,
       isActive,
       includedCategories,
-      includedTemplateIds
+      includedTemplateIds,
+      durationType,
+      durationDays,
+      customStartDate,
+      customEndDate
     } = req.body;
 
     const updates = {};
@@ -78,9 +82,67 @@ router.put('/:id', async (req, res) => {
     if (isActive !== undefined) updates.isActive = isActive === true;
     if (includedCategories !== undefined) updates.includedCategories = Array.isArray(includedCategories) ? includedCategories : [];
     if (includedTemplateIds !== undefined) updates.includedTemplateIds = Array.isArray(includedTemplateIds) ? includedTemplateIds : [];
+    if (durationType !== undefined) updates.durationType = durationType;
+    if (durationDays !== undefined) updates.durationDays = Number(durationDays) || 30;
+    if (customStartDate !== undefined) updates.customStartDate = customStartDate;
+    if (customEndDate !== undefined) updates.customEndDate = customEndDate;
 
     const updated = await dbService.update('subscriptions', req.params.id, updates);
     res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST create subscription plan
+router.post('/', async (req, res) => {
+  try {
+    const {
+      name,
+      price,
+      description,
+      isActive,
+      includedCategories,
+      includedTemplateIds,
+      durationType,
+      durationDays,
+      customStartDate,
+      customEndDate
+    } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Name is a required field.' });
+    }
+
+    const newPlan = await dbService.add('subscriptions', {
+      name,
+      price: Number(price) || 0,
+      description: description || '',
+      isActive: isActive !== false,
+      includedCategories: Array.isArray(includedCategories) ? includedCategories : [],
+      includedTemplateIds: Array.isArray(includedTemplateIds) ? includedTemplateIds : [],
+      durationType: durationType || 'monthly',
+      durationDays: durationDays !== undefined ? Number(durationDays) : 30,
+      customStartDate: customStartDate || null,
+      customEndDate: customEndDate || null
+    });
+
+    res.status(201).json(newPlan);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE subscription plan
+router.delete('/:id', async (req, res) => {
+  try {
+    const plan = await dbService.getOne('subscriptions', req.params.id);
+    if (!plan) {
+      return res.status(404).json({ error: 'Subscription plan not found.' });
+    }
+
+    await dbService.delete('subscriptions', req.params.id);
+    res.json({ success: true, message: 'Subscription plan deleted successfully.' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

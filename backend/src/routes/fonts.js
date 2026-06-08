@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dbService } from '../services/db.js';
+import { requirePermission, logAuditEvent } from '../middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,8 +27,8 @@ function deleteLocalFile(filePath) {
 
 const router = express.Router();
 
-// GET all fonts
-router.get('/', async (req, res) => {
+// GET all fonts (guarded by fonts.view)
+router.get('/', requirePermission('fonts.view'), async (req, res) => {
   try {
     const list = await dbService.getAll('fonts');
     res.json(list);
@@ -36,10 +37,12 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST add font registry
-router.post('/', async (req, res) => {
+// POST add font registry (guarded by fonts.create)
+router.post('/', requirePermission('fonts.create'), async (req, res) => {
   try {
     const { family, localPath, isActive } = req.body;
+    const userId = req.headers['x-user-id'];
+    
     if (!family || !localPath) {
       return res.status(400).json({ error: 'Family and localPath are required.' });
     }
@@ -48,31 +51,38 @@ router.post('/', async (req, res) => {
       localPath,
       isActive: isActive !== false
     });
+    
+    await logAuditEvent(userId, `Added custom typography: ${newFont.family}`, 'Typography & Fonts');
     res.status(201).json(newFont);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// PUT update font
-router.put('/:id', async (req, res) => {
+// PUT update font (guarded by fonts.edit)
+router.put('/:id', requirePermission('fonts.edit'), async (req, res) => {
   try {
     const { family, localPath, isActive } = req.body;
+    const userId = req.headers['x-user-id'];
+    
     const updates = {};
     if (family !== undefined) updates.family = family;
     if (localPath !== undefined) updates.localPath = localPath;
     if (isActive !== undefined) updates.isActive = isActive;
 
     const updated = await dbService.update('fonts', req.params.id, updates);
+    await logAuditEvent(userId, `Updated typography settings for: ${updated.family}`, 'Typography & Fonts');
     res.json(updated);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// DELETE font (+ delete the actual .ttf file from disk)
-router.delete('/:id', async (req, res) => {
+// DELETE font (guarded by fonts.delete)
+router.delete('/:id', requirePermission('fonts.delete'), async (req, res) => {
   try {
+    const userId = req.headers['x-user-id'];
+    
     // Step 1: Fetch font to get localPath before deleting
     const font = await dbService.getOne('fonts', req.params.id);
     if (!font) {
@@ -86,6 +96,7 @@ router.delete('/:id', async (req, res) => {
 
     // Step 3: Delete DB record
     await dbService.delete('fonts', req.params.id);
+    await logAuditEvent(userId, `Deleted typography: ${font.family}`, 'Typography & Fonts');
     res.json({ success: true, message: 'Font and its file deleted successfully.' });
   } catch (error) {
     res.status(500).json({ error: error.message });

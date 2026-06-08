@@ -8,7 +8,7 @@ router.get('/summary', async (req, res) => {
   try {
     const templates = await dbService.getAll('templates');
     const categories = await dbService.getAll('categories');
-    const users = await dbService.getAll('users');
+    const users = await dbService.getAll('app_users');
     const drafts = await dbService.getAll('user_drafts').catch(() => []);
     const transactions = await dbService.getAll('transactions').catch(() => []);
     const purchases = await dbService.getAll('user_purchases').catch(() => []);
@@ -160,7 +160,7 @@ router.get('/charts', async (req, res) => {
   try {
     const templates = await dbService.getAll('templates');
     const categories = await dbService.getAll('categories');
-    const users = await dbService.getAll('users');
+    const users = await dbService.getAll('app_users');
 
     // 1. User growth trend (cumulative registration count based on range parameter)
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

@@ -1,5 +1,6 @@
 import express from 'express';
 import { dbService } from '../services/db.js';
+import { requirePermission, getUserPermissions, logAuditEvent } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -25,8 +26,8 @@ const DEFAULT_PLANS = [
   }
 ];
 
-// GET all subscription plans
-router.get('/', async (req, res) => {
+// GET all subscription plans (guarded by subscriptions.view)
+router.get('/', requirePermission('subscriptions.view'), async (req, res) => {
   try {
     let list = await dbService.getAll('subscriptions');
     
@@ -46,8 +47,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET single subscription plan
-router.get('/:id', async (req, res) => {
+// GET single subscription plan (guarded by subscriptions.view)
+router.get('/:id', requirePermission('subscriptions.view'), async (req, res) => {
   try {
     const plan = await dbService.getOne('subscriptions', req.params.id);
     if (!plan) {
@@ -59,9 +60,17 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// PUT update subscription plan
+// PUT update subscription plan (dynamic action-level guards, audit logged)
 router.put('/:id', async (req, res) => {
   try {
+    const userId = req.headers['x-user-id'];
+    if (!userId) {
+      return res.status(401).json({ error: 'Missing x-user-id header.' });
+    }
+
+    const userPerms = await getUserPermissions(userId);
+    const isSuperAdmin = userPerms.includes('*');
+
     const {
       name,
       price,
@@ -74,6 +83,26 @@ router.put('/:id', async (req, res) => {
       customStartDate,
       customEndDate
     } = req.body;
+
+    const planToEdit = await dbService.getOne('subscriptions', req.params.id);
+    if (!planToEdit) {
+      return res.status(404).json({ error: 'Subscription plan not found.' });
+    }
+
+    // Dynamic Permission check
+    let requiredPerm = 'subscriptions.edit';
+    const isPriceChange = price !== undefined && Number(price) !== planToEdit.price;
+    const isStatusChange = isActive !== undefined && isActive !== planToEdit.isActive;
+
+    if (isPriceChange) {
+      requiredPerm = 'subscriptions.manage_pricing';
+    } else if (isStatusChange) {
+      requiredPerm = isActive ? 'subscriptions.activate' : 'subscriptions.deactivate';
+    }
+
+    if (!isSuperAdmin && !userPerms.includes(requiredPerm)) {
+      return res.status(403).json({ error: `Forbidden. You do not have permission: ${requiredPerm}` });
+    }
 
     const updates = {};
     if (name !== undefined) updates.name = name;
@@ -88,14 +117,24 @@ router.put('/:id', async (req, res) => {
     if (customEndDate !== undefined) updates.customEndDate = customEndDate;
 
     const updated = await dbService.update('subscriptions', req.params.id, updates);
+    
+    // Audit Logging
+    if (isPriceChange) {
+      await logAuditEvent(userId, `Updated price of plan ${updated.name} to ${updated.price}`, 'Subscription Management');
+    } else if (isStatusChange) {
+      await logAuditEvent(userId, `${isActive ? 'Activated' : 'Deactivated'} subscription plan: ${updated.name}`, 'Subscription Management');
+    } else {
+      await logAuditEvent(userId, `Updated subscription settings for: ${updated.name}`, 'Subscription Management');
+    }
+    
     res.json(updated);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// POST create subscription plan
-router.post('/', async (req, res) => {
+// POST create subscription plan (guarded by subscriptions.create)
+router.post('/', requirePermission('subscriptions.create'), async (req, res) => {
   try {
     const {
       name,
@@ -109,6 +148,7 @@ router.post('/', async (req, res) => {
       customStartDate,
       customEndDate
     } = req.body;
+    const userId = req.headers['x-user-id'];
 
     if (!name) {
       return res.status(400).json({ error: 'Name is a required field.' });
@@ -127,21 +167,56 @@ router.post('/', async (req, res) => {
       customEndDate: customEndDate || null
     });
 
+    await logAuditEvent(userId, `Created subscription plan: ${newPlan.name}`, 'Subscription Management');
     res.status(201).json(newPlan);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// DELETE subscription plan
-router.delete('/:id', async (req, res) => {
+// DELETE subscription plan (guarded by subscriptions.delete)
+router.delete('/:id', requirePermission('subscriptions.delete'), async (req, res) => {
   try {
     const plan = await dbService.getOne('subscriptions', req.params.id);
+    const userId = req.headers['x-user-id'];
+    
     if (!plan) {
       return res.status(404).json({ error: 'Subscription plan not found.' });
     }
 
+    // Check if plan is active on any templates or categories
+    if (plan.id === 'monthly') {
+      const templates = await dbService.getAll('templates');
+      const linked = templates.filter(t => t.includedInMonthlyPlan === true);
+      if (linked.length > 0) {
+        return res.status(400).json({ 
+          error: `Cannot delete plan. It is currently active on ${linked.length} template(s) (e.g. ${linked[0].name}).` 
+        });
+      }
+    } else if (plan.id === 'yearly') {
+      const templates = await dbService.getAll('templates');
+      const linked = templates.filter(t => t.includedInYearlyPlan === true);
+      if (linked.length > 0) {
+        return res.status(400).json({ 
+          error: `Cannot delete plan. It is currently active on ${linked.length} template(s) (e.g. ${linked[0].name}).` 
+        });
+      }
+    } else {
+      // Custom plan
+      const hasTemplates = Array.isArray(plan.includedTemplateIds) && plan.includedTemplateIds.length > 0;
+      const hasCategories = Array.isArray(plan.includedCategories) && plan.includedCategories.length > 0;
+      if (hasTemplates || hasCategories) {
+        let details = [];
+        if (hasTemplates) details.push(`${plan.includedTemplateIds.length} template(s)`);
+        if (hasCategories) details.push(`${plan.includedCategories.length} category/categories`);
+        return res.status(400).json({ 
+          error: `Cannot delete plan. It is currently active on: ${details.join(', ')}.` 
+        });
+      }
+    }
+
     await dbService.delete('subscriptions', req.params.id);
+    await logAuditEvent(userId, `Deleted subscription plan: ${plan.name}`, 'Subscription Management');
     res.json({ success: true, message: 'Subscription plan deleted successfully.' });
   } catch (error) {
     res.status(500).json({ error: error.message });

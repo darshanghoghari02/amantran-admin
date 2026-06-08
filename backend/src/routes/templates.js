@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dbService } from '../services/db.js';
+import { requirePermission, getUserPermissions, logAuditEvent } from '../middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,8 +49,8 @@ function tryRemoveEmptyDir(dirPath) {
 
 const router = express.Router();
 
-// GET all templates
-router.get('/', async (req, res) => {
+// GET all templates (guarded by templates.view)
+router.get('/', requirePermission('templates.view'), async (req, res) => {
   try {
     const list = await dbService.getAll('templates');
     // Optional filter by category
@@ -64,8 +65,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET single template
-router.get('/:id', async (req, res) => {
+// GET single template (guarded by templates.view)
+router.get('/:id', requirePermission('templates.view'), async (req, res) => {
   try {
     const template = await dbService.getOne('templates', req.params.id);
     if (!template) {
@@ -77,8 +78,8 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST create template
-router.post('/', async (req, res) => {
+// POST create template (guarded by templates.create)
+router.post('/', requirePermission('templates.create'), async (req, res) => {
   try {
     const {
       categoryId,
@@ -96,6 +97,7 @@ router.post('/', async (req, res) => {
       includedInMonthlyPlan,
       includedInYearlyPlan
     } = req.body;
+    const userId = req.headers['x-user-id'];
 
     if (!categoryId || !name || !slug) {
       return res.status(400).json({ error: 'Category, name, and slug are required fields.' });
@@ -118,15 +120,24 @@ router.post('/', async (req, res) => {
       includedInYearlyPlan: includedInYearlyPlan !== false
     });
 
+    await logAuditEvent(userId, `Created template: ${newTemplate.name}`, 'Templates');
     res.status(201).json(newTemplate);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// PUT update template
+// PUT update template (dynamic action-level guards, audit logged)
 router.put('/:id', async (req, res) => {
   try {
+    const userId = req.headers['x-user-id'];
+    if (!userId) {
+      return res.status(401).json({ error: 'Missing x-user-id header.' });
+    }
+
+    const userPerms = await getUserPermissions(userId);
+    const isSuperAdmin = userPerms.includes('*');
+
     const {
       categoryId,
       name,
@@ -143,6 +154,23 @@ router.put('/:id', async (req, res) => {
       includedInMonthlyPlan,
       includedInYearlyPlan
     } = req.body;
+
+    const templateToEdit = await dbService.getOne('templates', req.params.id);
+    if (!templateToEdit) {
+      return res.status(404).json({ error: 'Template not found.' });
+    }
+
+    // Dynamic Permission check
+    let requiredPerm = 'templates.edit';
+    const isPublishChange = isActive !== undefined && isActive !== templateToEdit.isActive;
+    
+    if (isPublishChange) {
+      requiredPerm = isActive ? 'templates.publish' : 'templates.unpublish';
+    }
+
+    if (!isSuperAdmin && !userPerms.includes(requiredPerm)) {
+      return res.status(403).json({ error: `Forbidden. You do not have permission: ${requiredPerm}` });
+    }
 
     const updates = {};
     if (categoryId !== undefined) updates.categoryId = categoryId;
@@ -161,16 +189,25 @@ router.put('/:id', async (req, res) => {
     if (includedInYearlyPlan !== undefined) updates.includedInYearlyPlan = includedInYearlyPlan === true;
 
     const updated = await dbService.update('templates', req.params.id, updates);
+    
+    if (isPublishChange) {
+      await logAuditEvent(userId, `${isActive ? 'Published' : 'Unpublished'} template: ${updated.name}`, 'Templates');
+    } else {
+      await logAuditEvent(userId, `Updated template: ${updated.name}`, 'Templates');
+    }
+    
     res.json(updated);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// POST duplicate template
-router.post('/:id/duplicate', async (req, res) => {
+// POST duplicate template (guarded by templates.create)
+router.post('/:id/duplicate', requirePermission('templates.create'), async (req, res) => {
   try {
     const original = await dbService.getOne('templates', req.params.id);
+    const userId = req.headers['x-user-id'];
+    
     if (!original) {
       return res.status(404).json({ error: 'Original template not found' });
     }
@@ -188,15 +225,17 @@ router.post('/:id/duplicate', async (req, res) => {
     delete clonedTemplate.updatedAt;
 
     const savedClone = await dbService.add('templates', clonedTemplate);
+    await logAuditEvent(userId, `Cloned template: ${original.name} into ${savedClone.name}`, 'Templates');
     res.status(201).json(savedClone);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// DELETE template (+ delete ALL its image files from disk)
-router.delete('/:id', async (req, res) => {
+// DELETE template (guarded by templates.delete)
+router.delete('/:id', requirePermission('templates.delete'), async (req, res) => {
   try {
+    const userId = req.headers['x-user-id'];
     // Step 1: Fetch template to get all asset paths before deleting
     const template = await dbService.getOne('templates', req.params.id);
     if (!template) {
@@ -252,6 +291,7 @@ router.delete('/:id', async (req, res) => {
 
     // Step 5: Delete DB record (including recursive Firestore subcollections)
     await dbService.delete('templates', req.params.id);
+    await logAuditEvent(userId, `Deleted template: ${template.name}`, 'Templates');
     res.json({
       success: true,
       message: `Template deleted. ${allPaths.size} asset file(s) removed from disk.`

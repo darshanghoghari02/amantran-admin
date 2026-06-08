@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dbService } from '../services/db.js';
+import { requirePermission, logAuditEvent } from '../middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,8 +27,8 @@ function deleteLocalFile(filePath) {
 
 const router = express.Router();
 
-// GET all categories
-router.get('/', async (req, res) => {
+// GET all categories (guarded by categories.view)
+router.get('/', requirePermission('categories.view'), async (req, res) => {
   try {
     const list = await dbService.getAll('categories');
     // Sort by displayOrder
@@ -38,8 +39,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET single category
-router.get('/:id', async (req, res) => {
+// GET single category (guarded by categories.view)
+router.get('/:id', requirePermission('categories.view'), async (req, res) => {
   try {
     const category = await dbService.getOne('categories', req.params.id);
     if (!category) {
@@ -51,10 +52,12 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST create category
-router.post('/', async (req, res) => {
+// POST create category (guarded by categories.create)
+router.post('/', requirePermission('categories.create'), async (req, res) => {
   try {
     const { name, slug, imageUrl, displayOrder, isActive } = req.body;
+    const userId = req.headers['x-user-id'];
+    
     if (!name || !slug) {
       return res.status(400).json({ error: 'Name and slug are required fields.' });
     }
@@ -65,16 +68,20 @@ router.post('/', async (req, res) => {
       displayOrder: parseInt(displayOrder) || 1,
       isActive: isActive !== false
     });
+    
+    await logAuditEvent(userId, `Created category: ${newCategory.name}`, 'Categories');
     res.status(201).json(newCategory);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// PUT update category
-router.put('/:id', async (req, res) => {
+// PUT update category (guarded by categories.edit)
+router.put('/:id', requirePermission('categories.edit'), async (req, res) => {
   try {
     const { name, slug, imageUrl, displayOrder, isActive } = req.body;
+    const userId = req.headers['x-user-id'];
+    
     const updates = {};
     if (name !== undefined) updates.name = name;
     if (slug !== undefined) updates.slug = slug.toLowerCase().replace(/[^a-z0-9_]/g, '_');
@@ -83,15 +90,18 @@ router.put('/:id', async (req, res) => {
     if (isActive !== undefined) updates.isActive = isActive;
 
     const updated = await dbService.update('categories', req.params.id, updates);
+    await logAuditEvent(userId, `Updated category: ${updated.name}`, 'Categories');
     res.json(updated);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// DELETE category (+ delete its image file from disk)
-router.delete('/:id', async (req, res) => {
+// DELETE category (guarded by categories.delete)
+router.delete('/:id', requirePermission('categories.delete'), async (req, res) => {
   try {
+    const userId = req.headers['x-user-id'];
+    
     // Step 1: Fetch category to get imageUrl before deleting
     const category = await dbService.getOne('categories', req.params.id);
     if (!category) {
@@ -112,6 +122,7 @@ router.delete('/:id', async (req, res) => {
 
     // Step 3: Delete DB record
     await dbService.delete('categories', req.params.id);
+    await logAuditEvent(userId, `Deleted category: ${category.name}`, 'Categories');
     res.json({ success: true, message: 'Category and its image deleted successfully.' });
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -10,6 +10,7 @@ import templateRoutes from './src/routes/templates.js';
 import fontRoutes from './src/routes/fonts.js';
 import languageRoutes from './src/routes/languages.js';
 import userRoutes from './src/routes/users.js';
+import roleRoutes from './src/routes/roles.js';
 import analyticsRoutes from './src/routes/analytics.js';
 import uploadRoutes from './src/routes/uploads.js';
 import subscriptionRoutes from './src/routes/subscriptions.js';
@@ -17,6 +18,8 @@ import userSubscriptionRoutes from './src/routes/user-subscriptions.js';
 import userPurchaseRoutes from './src/routes/user-purchases.js';
 import userDraftRoutes from './src/routes/user-drafts.js';
 import transactionRoutes from './src/routes/transactions.js';
+import auditLogRoutes from './src/routes/audit-logs.js';
+import settingsRoutes from './src/routes/settings.js';
 import { dbService } from './src/services/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -29,7 +32,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id']
 }));
 
 app.use(express.json({ limit: '50mb' }));
@@ -84,6 +87,7 @@ app.use('/api/templates', templateRoutes);
 app.use('/api/fonts', fontRoutes);
 app.use('/api/languages', languageRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/roles', roleRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
@@ -91,6 +95,8 @@ app.use('/api/user-subscriptions', userSubscriptionRoutes);
 app.use('/api/user-purchases', userPurchaseRoutes);
 app.use('/api/user-drafts', userDraftRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Base route info
 app.get('/', (req, res) => {

@@ -27,6 +27,19 @@ interface TemplatesListProps {
 }
 
 export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesListProps) {
+  const hasPermission = (perm: string): boolean => {
+    if (!currentUser) return false;
+    const rId = currentUser.roleId || currentUser.role || 'user';
+    if (rId === 'super_admin') return true;
+    if (currentUser.permissions?.includes('*')) return true;
+    return currentUser.permissions?.includes(perm) || false;
+  };
+
+  const authHeaders = {
+    'Content-Type': 'application/json',
+    'x-user-id': currentUser?.id || 'admin_super'
+  };
+
   const [templates, setTemplates] = useState<Template[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [fonts, setFonts] = useState<CustomFont[]>([]);
@@ -92,12 +105,13 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
   async function fetchInitialData() {
     try {
       const catParam = selectedCatId ? `?categoryId=${selectedCatId}` : '';
+      const headers = { 'x-user-id': currentUser?.id || 'admin_super' };
       const [resTpl, resCat, resFont, resLang, resPlans] = await Promise.all([
-        fetch(`${API_URL}/api/templates${catParam}`),
-        fetch(`${API_URL}/api/categories`),
-        fetch(`${API_URL}/api/fonts`),
-        fetch(`${API_URL}/api/languages`),
-        fetch(`${API_URL}/api/subscriptions`)
+        fetch(`${API_URL}/api/templates${catParam}`, { headers }),
+        fetch(`${API_URL}/api/categories`, { headers }),
+        fetch(`${API_URL}/api/fonts`, { headers }),
+        fetch(`${API_URL}/api/languages`, { headers }),
+        fetch(`${API_URL}/api/subscriptions`, { headers })
       ]);
 
       const tplData = await resTpl.json();
@@ -143,6 +157,18 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (editingTemplate) {
+      if (!hasPermission('templates.edit')) {
+        useToastStore.getState().addToast('Access Denied. You lack the "templates.edit" permission.', 'warning');
+        return;
+      }
+    } else {
+      if (!hasPermission('templates.create')) {
+        useToastStore.getState().addToast('Access Denied. You lack the "templates.create" permission.', 'warning');
+        return;
+      }
+    }
+
     if (!name || !slug || !categoryId) {
       useToastStore.getState().addToast('Template name, slug and category are required.', 'warning');
       return;
@@ -165,7 +191,8 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
         thumbData.append('file', thumbnailFile);
         const resThumb = await fetch(`${API_URL}/api/uploads/single?type=template&categorySlug=${catSlug}&templateSlug=${cleanTplSlug}`, {
           method: 'POST',
-          body: thumbData
+          body: thumbData,
+          headers: { 'x-user-id': currentUser?.id || 'admin_super' }
         });
         const thumbJson = await resThumb.json();
         if (thumbJson.success) {
@@ -181,7 +208,8 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
         }
         const resBg = await fetch(`${API_URL}/api/uploads/multiple?type=template&categorySlug=${catSlug}&templateSlug=${cleanTplSlug}`, {
           method: 'POST',
-          body: bgData
+          body: bgData,
+          headers: { 'x-user-id': currentUser?.id || 'admin_super' }
         });
         const bgJson = await resBg.json();
         if (bgJson.success) {
@@ -1765,7 +1793,7 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify(payload)
       });
 
@@ -1791,7 +1819,7 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
             
             await fetch(`${API_URL}/api/subscriptions/${plan.id}`, {
               method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
+              headers: authHeaders,
               body: JSON.stringify({
                 ...plan,
                 includedTemplateIds: newTemplateIds
@@ -1823,9 +1851,14 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
   };
 
   const handleDuplicate = async (id: string) => {
+    if (!hasPermission('templates.create')) {
+      useToastStore.getState().addToast('Access Denied. You lack the "templates.create" permission.', 'warning');
+      return;
+    }
     try {
       const res = await fetch(`${API_URL}/api/templates/${id}/duplicate`, {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'x-user-id': currentUser?.id || 'admin_super' }
       });
       if (res.ok) {
         fetchInitialData();
@@ -1841,11 +1874,16 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
   };
 
   const handleDelete = async (id: string) => {
+    if (!hasPermission('templates.delete')) {
+      useToastStore.getState().addToast('Access Denied. You lack the "templates.delete" permission.', 'warning');
+      return;
+    }
     if (!confirm('Are you sure you want to delete this template? All designed card pages and elements will be lost.')) return;
 
     try {
       const res = await fetch(`${API_URL}/api/templates/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'x-user-id': currentUser?.id || 'admin_super' }
       });
       if (res.ok) {
         fetchInitialData();
@@ -1867,9 +1905,16 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
     );
 
     try {
+      if (!hasPermission('templates.publish')) {
+        setTemplates(prev =>
+          prev.map(tpl => (tpl.id === id ? { ...tpl, isActive: activeState } : tpl))
+        );
+        useToastStore.getState().addToast('Access Denied. You lack the "templates.publish" permission.', 'warning');
+        return;
+      }
       const res = await fetch(`${API_URL}/api/templates/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ isActive: !activeState })
       });
 
@@ -1979,7 +2024,7 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
           </div>
 
           {/* Create Template Button */}
-          {(currentUser?.role === 'super_admin' || currentUser?.role === 'content_manager' || !currentUser) && (
+          {hasPermission('templates.create') && (
             <button
               onClick={openAddModal}
               className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-[#a0525e] text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 shrink-0"
@@ -2087,18 +2132,18 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
                   <div className="absolute left-3 top-3 flex flex-wrap gap-1 max-w-[calc(100%-24px)]">
                     {tpl.isPremium ? (
                       <>
-                        {tpl.includedInMonthlyPlan && (
+                        {tpl.includedInMonthlyPlan && plans.find(p => p.id === 'monthly')?.isActive !== false && (
                           <span className="flex items-center gap-0.5 px-2 py-0.5 bg-blue-600 text-white text-[9px] font-extrabold rounded-md uppercase shadow-sm">
                             Monthly
                           </span>
                         )}
-                        {tpl.includedInYearlyPlan && (
+                        {tpl.includedInYearlyPlan && plans.find(p => p.id === 'yearly')?.isActive !== false && (
                           <span className="flex items-center gap-0.5 px-2 py-0.5 bg-purple-600 text-white text-[9px] font-extrabold rounded-md uppercase shadow-sm">
                             Yearly
                           </span>
                         )}
                         {plans.map((p) => {
-                          if (p.id !== 'monthly' && p.id !== 'yearly' && p.includedTemplateIds && p.includedTemplateIds.includes(tpl.id)) {
+                          if (p.isActive && p.id !== 'monthly' && p.id !== 'yearly' && p.includedTemplateIds && p.includedTemplateIds.includes(tpl.id)) {
                             return (
                               <span key={p.id} className="flex items-center gap-0.5 px-2 py-0.5 bg-emerald-600 text-white text-[9px] font-extrabold rounded-md uppercase shadow-sm">
                                 {p.name}
@@ -2137,7 +2182,7 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
                   </div>
 
                   {/* Design in Canvas Button overlay */}
-                  {currentUser?.role !== 'user' && (
+                  {hasPermission('templates.edit') && (
                     <div className="absolute inset-0 bg-wedding-charcoal-dark/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">
                       <button
                         onClick={() => onOpenEditor(tpl)}
@@ -2165,7 +2210,7 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
 
                   {/* Actions Bar */}
                   <div className="flex items-center justify-between gap-2 pt-2 border-t border-wedding-pink-medium/15">
-                    {currentUser?.role === 'user' ? (
+                    {!hasPermission('templates.edit') ? (
                       <span className="flex-1 py-2 border border-wedding-pink-medium/20 text-wedding-charcoal-light/60 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 bg-gray-50/50 select-none">
                         Read-Only View
                       </span>
@@ -2179,39 +2224,47 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
                       </button>
                     )}
 
-                    {(currentUser?.role === 'super_admin' || currentUser?.role === 'content_manager' || !currentUser) && (
+                    {(hasPermission('templates.edit') || hasPermission('templates.publish') || hasPermission('templates.create') || hasPermission('templates.delete')) && (
                       <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => openEditModal(tpl)}
-                          className="p-2 text-wedding-charcoal-light hover:text-wedding-pink-dark hover:bg-wedding-pink-light/50 rounded-lg transition-colors border border-wedding-pink-medium/10 animate-scaleIn"
-                          title="Edit Template Details"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleToggleState(tpl.id, tpl.isActive)}
-                          className={`p-2 rounded-lg border transition-all duration-200 ${tpl.isActive
-                            ? 'border-amber-200 text-amber-600 bg-amber-50/50 hover:bg-amber-100/50'
-                            : 'border-green-200 text-green-600 bg-green-50/50 hover:bg-green-100/50'
-                            }`}
-                          title={tpl.isActive ? 'Revert to Draft' : 'Publish to Live'}
-                        >
-                          {tpl.isActive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                        <button
-                          onClick={() => handleDuplicate(tpl.id)}
-                          className="p-2 text-wedding-charcoal-light hover:text-wedding-pink-dark hover:bg-wedding-pink-light/50 rounded-lg transition-colors border border-wedding-pink-medium/10 animate-scaleIn"
-                          title="Clone Template"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(tpl.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
-                          title="Delete Template"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {hasPermission('templates.edit') && (
+                          <button
+                            onClick={() => openEditModal(tpl)}
+                            className="p-2 text-wedding-charcoal-light hover:text-wedding-pink-dark hover:bg-wedding-pink-light/50 rounded-lg transition-colors border border-wedding-pink-medium/10 animate-scaleIn"
+                            title="Edit Template Details"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {hasPermission('templates.publish') && (
+                          <button
+                            onClick={() => handleToggleState(tpl.id, tpl.isActive)}
+                            className={`p-2 rounded-lg border transition-all duration-200 ${tpl.isActive
+                              ? 'border-amber-200 text-amber-600 bg-amber-50/50 hover:bg-amber-100/50'
+                              : 'border-green-200 text-green-600 bg-green-50/50 hover:bg-green-100/50'
+                              }`}
+                            title={tpl.isActive ? 'Revert to Draft' : 'Publish to Live'}
+                          >
+                            {tpl.isActive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        )}
+                        {hasPermission('templates.create') && (
+                          <button
+                            onClick={() => handleDuplicate(tpl.id)}
+                            className="p-2 text-wedding-charcoal-light hover:text-wedding-pink-dark hover:bg-wedding-pink-light/50 rounded-lg transition-colors border border-wedding-pink-medium/10 animate-scaleIn"
+                            title="Clone Template"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {hasPermission('templates.delete') && (
+                          <button
+                            onClick={() => handleDelete(tpl.id)}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                            title="Delete Template"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2387,10 +2440,10 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
                     <div className="space-y-1.5 sm:col-span-2">
                       <label className="text-[10px] font-bold text-wedding-charcoal-light uppercase tracking-wider block mb-1">Include in Subscription Plans</label>
                       <div className="flex gap-2 flex-wrap bg-white p-2.5 border border-wedding-pink-medium/30 rounded-2xl">
-                        {plans.length === 0 ? (
-                          <span className="text-xs text-gray-400 font-medium p-1">No plans available. Add one in Subscription Settings.</span>
+                        {plans.filter(p => p.isActive).length === 0 ? (
+                          <span className="text-xs text-gray-400 font-medium p-1">No active plans available. Add one in Subscription Settings.</span>
                         ) : (
-                          plans.map((plan) => {
+                          plans.filter(p => p.isActive).map((plan) => {
                             const isChecked = selectedPlanIds.includes(plan.id);
                             return (
                               <button

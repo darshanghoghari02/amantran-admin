@@ -12,6 +12,9 @@ import Fonts from '../components/Fonts';
 import Languages from '../components/Languages';
 import Users from '../components/Users';
 import Subscriptions from '../components/Subscriptions';
+import RolesAndPermissions from '../components/RolesAndPermissions';
+import AuditLogs from '../components/AuditLogs';
+import Settings from '../components/Settings';
 import EditorWorkspace from '../components/editor/EditorWorkspace';
 import { useCanvasStore } from '../store/canvasStore';
 import { User } from '../types';
@@ -115,7 +118,9 @@ export default function RootPage() {
   // Sync logged-in admin user's profile from database in real-time
   useEffect(() => {
     if (isLoggedIn && currentUser && currentUser.id !== 'admin_super') {
-      fetch(`${API_URL}/api/users/${currentUser.id}`)
+      fetch(`${API_URL}/api/users/${currentUser.id}`, {
+        headers: { 'x-user-id': currentUser.id }
+      })
         .then(res => {
           if (res.ok) return res.json();
           throw new Error('Database sync skipped');
@@ -303,23 +308,31 @@ export default function RootPage() {
   }
 
   // Granular Tab Access Permission Guard
-  const hasAccessToTab = (tab: string, role: string | undefined): boolean => {
-    if (!role) return false;
-    if (role === 'super_admin') return true;
+  const hasAccessToTab = (tab: string, user: User | null | undefined): boolean => {
+    if (!user) return false;
+    const roleId = user.roleId || user.role || 'user';
+    if (roleId === 'super_admin') return true;
 
-    if (role === 'content_manager') {
-      return tab !== 'users' && tab !== 'subscriptions';
-    }
+    // If the user's resolved permissions list contains '*' (wildcard), allow access to all tabs
+    if (user.permissions?.includes('*')) return true;
 
-    if (role === 'editor') {
-      return tab === 'dashboard' || tab === 'templates' || tab === 'editor';
-    }
+    const mapping: Record<string, string> = {
+      dashboard: 'dashboard.view',
+      templates: 'templates.view',
+      categories: 'categories.view',
+      fonts: 'fonts.view',
+      languages: 'languages.view',
+      subscriptions: 'subscriptions.view',
+      users: 'users.view',
+      roles: 'roles.view',
+      'audit-logs': 'roles.view',
+      settings: 'settings.view'
+    };
 
-    if (role === 'user') {
-      return tab === 'dashboard' || tab === 'templates';
-    }
+    const requiredPerm = mapping[tab];
+    if (!requiredPerm) return false;
 
-    return false;
+    return user.permissions?.includes(requiredPerm) || false;
   };
 
   // 2. Standard Dashboard panels view
@@ -360,15 +373,15 @@ export default function RootPage() {
 
         {/* Dynamic content rendering body */}
         <main className="flex-1 p-8 overflow-y-auto bg-wedding-bg">
-          {currentTab === 'dashboard' && hasAccessToTab('dashboard', currentUser?.role) && (
+          {currentTab === 'dashboard' && hasAccessToTab('dashboard', currentUser) && (
             <Dashboard onNavigate={setCurrentTab} />
           )}
 
-          {currentTab === 'categories' && hasAccessToTab('categories', currentUser?.role) && (
-            <Categories />
+          {currentTab === 'categories' && hasAccessToTab('categories', currentUser) && (
+            <Categories currentUser={currentUser || undefined} />
           )}
 
-          {currentTab === 'templates' && hasAccessToTab('templates', currentUser?.role) && (
+          {currentTab === 'templates' && hasAccessToTab('templates', currentUser) && (
             <TemplatesList
               currentUser={currentUser || undefined}
               onOpenEditor={(tpl) => {
@@ -378,29 +391,41 @@ export default function RootPage() {
             />
           )}
 
-          {currentTab === 'fonts' && hasAccessToTab('fonts', currentUser?.role) && (
-            <Fonts />
+          {currentTab === 'fonts' && hasAccessToTab('fonts', currentUser) && (
+            <Fonts currentUser={currentUser || undefined} />
           )}
 
-          {currentTab === 'languages' && hasAccessToTab('languages', currentUser?.role) && (
-            <Languages />
+          {currentTab === 'languages' && hasAccessToTab('languages', currentUser) && (
+            <Languages currentUser={currentUser || undefined} />
           )}
 
-          {currentTab === 'users' && hasAccessToTab('users', currentUser?.role) && (
-            <Users />
+          {currentTab === 'users' && hasAccessToTab('users', currentUser) && (
+            <Users currentUser={currentUser || undefined} />
           )}
 
-          {currentTab === 'subscriptions' && hasAccessToTab('subscriptions', currentUser?.role) && (
-            <Subscriptions />
+          {currentTab === 'subscriptions' && hasAccessToTab('subscriptions', currentUser) && (
+            <Subscriptions currentUser={currentUser || undefined} />
+          )}
+
+          {currentTab === 'roles' && hasAccessToTab('roles', currentUser) && (
+            <RolesAndPermissions currentUser={currentUser || undefined} />
+          )}
+
+          {currentTab === 'audit-logs' && hasAccessToTab('audit-logs', currentUser) && (
+            <AuditLogs currentUser={currentUser || undefined} />
+          )}
+
+          {currentTab === 'settings' && hasAccessToTab('settings', currentUser) && (
+            <Settings currentUser={currentUser || undefined} />
           )}
 
           {/* Access Denied Warning Redirect */}
-          {currentUser && !hasAccessToTab(currentTab, currentUser.role) && (
+          {currentUser && !hasAccessToTab(currentTab, currentUser) && (
             <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3 text-center bg-white border border-red-200 rounded-3xl p-8 shadow-sm">
               <span className="p-4 bg-red-50 text-red-600 rounded-full font-bold text-xl">⚠️</span>
               <h4 className="font-bold text-lg text-wedding-charcoal-dark">Section Access Restricted</h4>
               <p className="text-sm text-gray-500 max-w-sm">
-                Your active role ({currentUser.role.toUpperCase()}) does not possess the administrative privileges required to access this system module.
+                Your active role ({(currentUser.roleId || currentUser.role).toUpperCase()}) does not possess the administrative privileges required to access this system module.
               </p>
               <button
                 onClick={() => setCurrentTab('dashboard')}

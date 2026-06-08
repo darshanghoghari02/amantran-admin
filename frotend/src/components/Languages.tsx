@@ -1,10 +1,26 @@
 import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Trash2, CheckCircle2, XCircle, Globe } from 'lucide-react';
-import { Language } from '../types';
+import { Language, User } from '../types';
 import { useToastStore } from '../store/toastStore';
 
-export default function Languages() {
+interface LanguagesProps {
+  currentUser?: User;
+}
+
+export default function Languages({ currentUser }: LanguagesProps) {
+  const hasPermission = (perm: string): boolean => {
+    if (!currentUser) return false;
+    const rId = currentUser.roleId || currentUser.role || 'user';
+    if (rId === 'super_admin') return true;
+    if (currentUser.permissions?.includes('*')) return true;
+    return currentUser.permissions?.includes(perm) || false;
+  };
+
+  const authHeaders = {
+    'Content-Type': 'application/json',
+    'x-user-id': currentUser?.id || 'admin_super'
+  };
   const [languages, setLanguages] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -20,7 +36,9 @@ export default function Languages() {
 
   async function fetchLanguages() {
     try {
-      const res = await fetch(`${API_URL}/api/languages`);
+      const res = await fetch(`${API_URL}/api/languages`, {
+        headers: { 'x-user-id': currentUser?.id || 'admin_super' }
+      });
       const data = await res.json();
       setLanguages(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -41,9 +59,13 @@ export default function Languages() {
     const payload = { code, name, isActive };
 
     try {
+      if (!hasPermission('languages.create')) {
+        useToastStore.getState().addToast('Access Denied. You lack the "languages.create" permission.', 'warning');
+        return;
+      }
       const res = await fetch(`${API_URL}/api/languages`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify(payload)
       });
 
@@ -68,9 +90,14 @@ export default function Languages() {
     );
 
     try {
+      if (!hasPermission('languages.edit')) {
+        setLanguages(prev => prev.map(lang => (lang.id === id ? { ...lang, isActive: activeState } : lang)));
+        useToastStore.getState().addToast('Access Denied. You lack the "languages.edit" permission.', 'warning');
+        return;
+      }
       const res = await fetch(`${API_URL}/api/languages/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ isActive: !activeState })
       });
       if (!res.ok) {
@@ -95,11 +122,16 @@ export default function Languages() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!hasPermission('languages.delete')) {
+      useToastStore.getState().addToast('Access Denied. You lack the "languages.delete" permission.', 'warning');
+      return;
+    }
     if (!confirm('Are you sure you want to delete this language? Templates using this language will lose their translation metadata.')) return;
     
     try {
       const res = await fetch(`${API_URL}/api/languages/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'x-user-id': currentUser?.id || 'admin_super' }
       });
       if (res.ok) {
         fetchLanguages();
@@ -129,13 +161,15 @@ export default function Languages() {
           <h3 className="text-lg font-bold text-wedding-charcoal-dark tracking-tight">Supported Languages</h3>
           <p className="text-xs text-gray-500 font-semibold">Manage translation locales enabled for card templates</p>
         </div>
-        <button
-          onClick={openAddModal}
-          className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5"
-        >
-          <PlusCircle className="w-5 h-5" />
-          Add Language
-        </button>
+        {hasPermission('languages.create') && (
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5"
+          >
+            <PlusCircle className="w-5 h-5" />
+            Add Language
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -184,13 +218,15 @@ export default function Languages() {
                     </button>
                   </td>
                   <td className="py-4 px-6 text-right">
-                    <button
-                      onClick={() => handleDelete(lang.id)}
-                      className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-all duration-200"
-                      title="Delete Language"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {hasPermission('languages.delete') && (
+                      <button
+                        onClick={() => handleDelete(lang.id)}
+                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-all duration-200"
+                        title="Delete Language"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

@@ -1,10 +1,26 @@
 import { API_URL, getImageUrl } from '@/config';
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Edit3, Trash2, CheckCircle2, XCircle, Upload, Eye } from 'lucide-react';
-import { Category } from '../types';
+import { PlusCircle, Edit3, Trash2, CheckCircle2, XCircle, Upload } from 'lucide-react';
+import { Category, User } from '../types';
 import { useToastStore } from '../store/toastStore';
 
-export default function Categories() {
+interface CategoriesProps {
+  currentUser?: User;
+}
+
+export default function Categories({ currentUser }: CategoriesProps) {
+  const hasPermission = (perm: string): boolean => {
+    if (!currentUser) return false;
+    const rId = currentUser.roleId || currentUser.role || 'user';
+    if (rId === 'super_admin') return true;
+    if (currentUser.permissions?.includes('*')) return true;
+    return currentUser.permissions?.includes(perm) || false;
+  };
+
+  const authHeaders = {
+    'Content-Type': 'application/json',
+    'x-user-id': currentUser?.id || 'admin_super'
+  };
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,7 +40,9 @@ export default function Categories() {
 
   async function fetchCategories() {
     try {
-      const res = await fetch(`${API_URL}/api/categories`);
+      const res = await fetch(`${API_URL}/api/categories`, {
+        headers: { 'x-user-id': currentUser?.id || 'admin_super' }
+      });
       const data = await res.json();
       setCategories(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -112,15 +130,23 @@ export default function Categories() {
     try {
       let res;
       if (editingId) {
+        if (!hasPermission('categories.edit')) {
+          useToastStore.getState().addToast('Access Denied. You lack the "categories.edit" permission.', 'warning');
+          return;
+        }
         res = await fetch(`${API_URL}/api/categories/${editingId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify(payload)
         });
       } else {
+        if (!hasPermission('categories.create')) {
+          useToastStore.getState().addToast('Access Denied. You lack the "categories.create" permission.', 'warning');
+          return;
+        }
         res = await fetch(`${API_URL}/api/categories`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify(payload)
         });
       }
@@ -143,11 +169,16 @@ export default function Categories() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!hasPermission('categories.delete')) {
+      useToastStore.getState().addToast('Access Denied. You lack the "categories.delete" permission.', 'warning');
+      return;
+    }
     if (!confirm('Are you sure you want to delete this category?')) return;
     
     try {
       const res = await fetch(`${API_URL}/api/categories/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'x-user-id': currentUser?.id || 'admin_super' }
       });
       if (res.ok) {
         fetchCategories();
@@ -170,13 +201,15 @@ export default function Categories() {
           <h3 className="text-lg font-bold text-wedding-charcoal-dark tracking-tight">Category List</h3>
           <p className="text-xs text-gray-500 font-semibold">Manage categories, icons, cover visual assets, and render sequences</p>
         </div>
-        <button
-          onClick={openAddModal}
-          className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5"
-        >
-          <PlusCircle className="w-5 h-5" />
-          Add Category
-        </button>
+        {hasPermission('categories.create') && (
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5"
+          >
+            <PlusCircle className="w-5 h-5" />
+            Add Category
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -236,20 +269,24 @@ export default function Categories() {
                   </td>
                   <td className="py-4 px-6 text-right">
                     <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => openEditModal(cat)}
-                        className="p-2 text-wedding-charcoal-light hover:text-wedding-gold-dark hover:bg-wedding-pink-light/30 rounded-xl transition-all duration-200"
-                        title="Edit category"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(cat.id)}
-                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-all duration-200"
-                        title="Delete category"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {hasPermission('categories.edit') && (
+                        <button
+                          onClick={() => openEditModal(cat)}
+                          className="p-2 text-wedding-charcoal-light hover:text-wedding-gold-dark hover:bg-wedding-pink-light/30 rounded-xl transition-all duration-200"
+                          title="Edit category"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                      )}
+                      {hasPermission('categories.delete') && (
+                        <button
+                          onClick={() => handleDelete(cat.id)}
+                          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-all duration-200"
+                          title="Delete category"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

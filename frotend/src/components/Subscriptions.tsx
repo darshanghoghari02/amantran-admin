@@ -4,9 +4,25 @@ import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Save, Check, RefreshCw, AlertCircle, HelpCircle, Layers, FileText, PlusCircle, Trash2 } from 'lucide-react';
 import { useToastStore } from '../store/toastStore';
-import { Category, Template, SubscriptionPlan } from '../types';
+import { Category, Template, SubscriptionPlan, User } from '../types';
 
-export default function Subscriptions() {
+interface SubscriptionsProps {
+  currentUser?: User;
+}
+
+export default function Subscriptions({ currentUser }: SubscriptionsProps) {
+  const hasPermission = (perm: string): boolean => {
+    if (!currentUser) return false;
+    const rId = currentUser.roleId || currentUser.role || 'user';
+    if (rId === 'super_admin') return true;
+    if (currentUser.permissions?.includes('*')) return true;
+    return currentUser.permissions?.includes(perm) || false;
+  };
+
+  const authHeaders = {
+    'Content-Type': 'application/json',
+    'x-user-id': currentUser?.id || 'admin_super'
+  };
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -49,10 +65,11 @@ export default function Subscriptions() {
 
   async function fetchInitialData() {
     try {
+      const headers = { 'x-user-id': currentUser?.id || 'admin_super' };
       const [resPlans, resCats, resTpls] = await Promise.all([
-        fetch(`${API_URL}/api/subscriptions`),
-        fetch(`${API_URL}/api/categories`),
-        fetch(`${API_URL}/api/templates`)
+        fetch(`${API_URL}/api/subscriptions`, { headers }),
+        fetch(`${API_URL}/api/categories`, { headers }),
+        fetch(`${API_URL}/api/templates`, { headers })
       ]);
 
       const plansData = await resPlans.json();
@@ -135,6 +152,10 @@ export default function Subscriptions() {
   };
 
   const handleSavePlan = async (planId: string) => {
+    if (!hasPermission('subscriptions.edit') && !hasPermission('subscriptions.manage_pricing')) {
+      useToastStore.getState().addToast('Access Denied. You lack the "subscriptions.edit" permission.', 'warning');
+      return;
+    }
     const payload = editStates[planId];
     if (!payload) return;
 
@@ -142,7 +163,7 @@ export default function Subscriptions() {
     try {
       const res = await fetch(`${API_URL}/api/subscriptions/${planId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify(payload)
       });
 
@@ -167,6 +188,10 @@ export default function Subscriptions() {
 
   const handleCreatePlan = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!hasPermission('subscriptions.create')) {
+      useToastStore.getState().addToast('Access Denied. You lack the "subscriptions.create" permission.', 'warning');
+      return;
+    }
     if (!newPlanName) {
       useToastStore.getState().addToast('Plan name is required.', 'warning');
       return;
@@ -189,7 +214,7 @@ export default function Subscriptions() {
     try {
       const res = await fetch(`${API_URL}/api/subscriptions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify(payload)
       });
 
@@ -221,11 +246,16 @@ export default function Subscriptions() {
   };
 
   const handleDeletePlan = async (planId: string, planName: string) => {
+    if (!hasPermission('subscriptions.delete')) {
+      useToastStore.getState().addToast('Access Denied. You lack the "subscriptions.delete" permission.', 'warning');
+      return;
+    }
     if (!confirm(`Are you sure you want to delete the "${planName}" subscription plan?`)) return;
 
     try {
       const res = await fetch(`${API_URL}/api/subscriptions/${planId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'x-user-id': currentUser?.id || 'admin_super' }
       });
 
       if (res.ok) {
@@ -285,13 +315,15 @@ export default function Subscriptions() {
             Configure premium membership details. Define paywall gates by setting category-wide overrides or selecting specific individual templates included under each subscription package.
           </p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-xs font-extrabold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 whitespace-nowrap"
-        >
-          <PlusCircle className="w-5 h-5" />
-          Create Plan
-        </button>
+        {hasPermission('subscriptions.create') && (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-xs font-extrabold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 whitespace-nowrap"
+          >
+            <PlusCircle className="w-5 h-5" />
+            Create Plan
+          </button>
+        )}
       </div>
 
       {/* Quick Statistics Summary */}
@@ -376,6 +408,7 @@ export default function Subscriptions() {
                       <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Plan Title</label>
                       <input
                         type="text"
+                        disabled={!hasPermission('subscriptions.edit')}
                         value={editState.name}
                         onChange={(e) => handleFieldChange(plan.id, 'name', e.target.value)}
                         placeholder="e.g. Monthly Premium"
@@ -388,6 +421,7 @@ export default function Subscriptions() {
                       <input
                         type="number"
                         min="0"
+                        disabled={!hasPermission('subscriptions.manage_pricing')}
                         value={editState.price}
                         onChange={(e) => handleFieldChange(plan.id, 'price', Number(e.target.value))}
                         className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 focus:bg-white font-bold transition-all"
@@ -400,6 +434,7 @@ export default function Subscriptions() {
                       <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Duration Type</label>
                       <select
                         value={editState.durationType || 'monthly'}
+                        disabled={!hasPermission('subscriptions.edit')}
                         onChange={(e) => {
                           const val = e.target.value as any;
                           let days = 30;
@@ -441,6 +476,7 @@ export default function Subscriptions() {
                         <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Start Date</label>
                         <input
                           type="date"
+                          disabled={!hasPermission('subscriptions.edit')}
                           value={editState.customStartDate ? editState.customStartDate.substring(0, 10) : ''}
                           onChange={(e) => handleFieldChange(plan.id, 'customStartDate', e.target.value)}
                           className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 focus:bg-white font-medium transition-all"
@@ -450,6 +486,7 @@ export default function Subscriptions() {
                         <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">End Date</label>
                         <input
                           type="date"
+                          disabled={!hasPermission('subscriptions.edit')}
                           value={editState.customEndDate ? editState.customEndDate.substring(0, 10) : ''}
                           onChange={(e) => handleFieldChange(plan.id, 'customEndDate', e.target.value)}
                           className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 focus:bg-white font-medium transition-all"
@@ -462,6 +499,7 @@ export default function Subscriptions() {
                     <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Description</label>
                     <textarea
                       value={editState.description}
+                      disabled={!hasPermission('subscriptions.edit')}
                       onChange={(e) => handleFieldChange(plan.id, 'description', e.target.value)}
                       placeholder="Plan features summary..."
                       rows={2}
@@ -477,6 +515,7 @@ export default function Subscriptions() {
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
+                        disabled={!hasPermission('subscriptions.edit')}
                         checked={editState.isActive}
                         onChange={(e) => handleFieldChange(plan.id, 'isActive', e.target.checked)}
                         className="sr-only peer"
@@ -501,6 +540,7 @@ export default function Subscriptions() {
                           <button
                             type="button"
                             key={cat.id}
+                            disabled={!hasPermission('subscriptions.edit')}
                             onClick={() => toggleCategoryInclusion(plan.id, cat.id)}
                             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${isChecked
                               ? 'bg-blue-50 border-blue-500 text-blue-700 font-black shadow-xs'
@@ -524,6 +564,7 @@ export default function Subscriptions() {
                           <button
                             type="button"
                             key={tpl.id}
+                            disabled={!hasPermission('subscriptions.edit')}
                             onClick={() => toggleTemplateInclusion(plan.id, tpl.id)}
                             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border ${isChecked
                               ? 'bg-blue-50 border-blue-500 text-blue-700 font-black shadow-xs'
@@ -541,6 +582,7 @@ export default function Subscriptions() {
 
               {/* Action Footer */}
               <div className="bg-gray-50 p-6 border-t border-wedding-pink-medium/20 flex items-center justify-between">
+                {hasPermission('subscriptions.delete') && (
                   <button
                     onClick={() => handleDeletePlan(plan.id, editState.name)}
                     className="flex items-center gap-1.5 px-3.5 py-2 border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded-xl shadow-xs transition-all duration-200"
@@ -549,29 +591,32 @@ export default function Subscriptions() {
                     <Trash2 className="w-3.5 h-3.5" />
                     Delete Plan
                   </button>
+                )}
                 
-                <button
-                  onClick={() => handleSavePlan(plan.id)}
-                  disabled={savingPlanId === plan.id}
-                  className="flex items-center gap-2 px-5 py-3 bg-wedding-charcoal-dark hover:bg-wedding-charcoal-light text-wedding-gold-light hover:text-white text-xs font-extrabold rounded-2xl shadow transition-all duration-300 disabled:opacity-50"
-                >
-                  {savingPlanId === plan.id ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : saveSuccessId === plan.id ? (
-                    <>
-                      <Check className="w-4 h-4 text-green-400 stroke-[3]" />
-                      Saved!
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 text-wedding-pink-medium" />
-                      Save settings
-                    </>
-                  )}
-                </button>
+                {(hasPermission('subscriptions.edit') || hasPermission('subscriptions.manage_pricing')) && (
+                  <button
+                    onClick={() => handleSavePlan(plan.id)}
+                    disabled={savingPlanId === plan.id}
+                    className="flex items-center gap-2 px-5 py-3 bg-wedding-charcoal-dark hover:bg-wedding-charcoal-light text-wedding-gold-light hover:text-white text-xs font-extrabold rounded-2xl shadow transition-all duration-300 disabled:opacity-50"
+                  >
+                    {savingPlanId === plan.id ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : saveSuccessId === plan.id ? (
+                      <>
+                        <Check className="w-4 h-4 text-green-400 stroke-[3]" />
+                        Saved!
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 text-wedding-pink-medium" />
+                        Save settings
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
           );

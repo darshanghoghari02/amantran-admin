@@ -9,7 +9,9 @@ import {
   Heart, 
   Settings, 
   LogOut,
-  Sparkles
+  Sparkles,
+  Scroll,
+  Sliders
 } from 'lucide-react';
 import { User } from '../types';
 
@@ -22,28 +24,37 @@ interface SidebarProps {
   setIsSidebarOpen?: (open: boolean) => void;
 }
 
-export default function Sidebar({ currentTab, setCurrentTab, currentUser, onLogout, isSidebarOpen, setIsSidebarOpen }: SidebarProps) {
+export default function Sidebar({
+  currentTab,
+  setCurrentTab,
+  currentUser,
+  onLogout,
+  isSidebarOpen,
+  setIsSidebarOpen
+}: SidebarProps) {
   const menuItems = [
-    { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
-    { id: 'templates', name: 'Templates', icon: Palette },
-    { id: 'categories', name: 'Categories', icon: FolderHeart },
-    { id: 'fonts', name: 'Typography & Fonts', icon: Type },
-    { id: 'languages', name: 'Languages', icon: Languages },
-    { id: 'users', name: 'User Management', icon: Users },
-    { id: 'subscriptions', name: 'Subscription Settings', icon: Sparkles },
+    { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
+    { id: 'templates', name: 'Templates', icon: Palette, permission: 'templates.view' },
+    { id: 'categories', name: 'Categories', icon: FolderHeart, permission: 'categories.view' },
+    { id: 'fonts', name: 'Typography & Fonts', icon: Type, permission: 'fonts.view' },
+    { id: 'languages', name: 'Languages', icon: Languages, permission: 'languages.view' },
+    { id: 'subscriptions', name: 'Subscription Settings', icon: Sparkles, permission: 'subscriptions.view' },
+    { id: 'users', name: 'User Management', icon: Users, permission: 'users.view' },
+    { id: 'roles', name: 'Role & Permissions', icon: Settings, permission: 'roles.view' },
+    { id: 'audit-logs', name: 'Audit Logs', icon: Scroll, permission: 'roles.view' },
+    { id: 'settings', name: 'Settings', icon: Sliders, permission: 'settings.view' },
   ];
 
   // Dynamically filter items by role permissions
   const filteredMenuItems = menuItems.filter((item) => {
-    const role = currentUser?.role || 'super_admin';
-    if (role === 'super_admin') return true;
+    const roleId = currentUser?.roleId || currentUser?.role || 'super_admin';
+    if (roleId === 'super_admin') return true;
     
-    if (role === 'content_manager') {
-      return item.id !== 'users' && item.id !== 'subscriptions';
-    }
+    if (currentUser?.permissions?.includes('*')) return true;
     
-    if (role === 'editor' || role === 'user') {
-      return item.id === 'dashboard' || item.id === 'templates';
+    // Check if the user has resolved permissions array
+    if (currentUser?.permissions && Array.isArray(currentUser.permissions)) {
+      return currentUser.permissions.includes(item.permission);
     }
     
     return false;
@@ -60,9 +71,17 @@ export default function Sidebar({ currentTab, setCurrentTab, currentUser, onLogo
 
   const roleLabels: Record<string, string> = {
     super_admin: 'Super Admin',
+    admin: 'Admin',
     content_manager: 'Content Manager',
+    subscription_manager: 'Subscription Manager',
     editor: 'Editor',
     user: 'Standard User'
+  };
+
+  const getRoleLabel = (roleStr: string) => {
+    if (!roleStr) return 'Super Admin';
+    if (roleLabels[roleStr]) return roleLabels[roleStr];
+    return roleStr.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   };
 
   return (
@@ -131,7 +150,7 @@ export default function Sidebar({ currentTab, setCurrentTab, currentUser, onLogo
               {currentUser?.displayName || 'Super Admin'}
             </p>
             <p className="text-[9px] font-extrabold text-wedding-pink-dark uppercase tracking-wider mb-0.5">
-              {roleLabels[currentUser?.role || 'super_admin']}
+              {getRoleLabel(currentUser?.roleId || currentUser?.role || 'super_admin')}
             </p>
             <p className="text-[10px] text-gray-400 truncate">{currentUser?.email || 'admin@amantran.com'}</p>
           </div>

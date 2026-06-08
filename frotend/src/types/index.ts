@@ -104,13 +104,26 @@ export interface Language {
   isActive: boolean;
 }
 
+export interface Role {
+  id: string;
+  name: string;
+  permissions: string[];
+  isDefault: boolean;
+}
+
 export interface User {
   id: string;
   email: string;
   displayName: string;
-  role: 'super_admin' | 'editor' | 'content_manager' | 'user';
+  role: string;
+  roleId?: string;
+  permissions?: string[];
+  customPermissions?: string[];
+  isCustomPermissions?: boolean;
   password?: string;
   isBlocked: boolean;
+  phoneNumber?: string;
+  status?: 'active' | 'suspended';
   invitationCount: number;
   draftsCount: number;
   createdAt: string;

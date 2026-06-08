@@ -1,10 +1,26 @@
 import { API_URL } from '@/config';
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Trash2, CheckCircle2, XCircle, Upload, Type } from 'lucide-react';
-import { CustomFont } from '../types';
+import { CustomFont, User } from '../types';
 import { useToastStore } from '../store/toastStore';
 
-export default function Fonts() {
+interface FontsProps {
+  currentUser?: User;
+}
+
+export default function Fonts({ currentUser }: FontsProps) {
+  const hasPermission = (perm: string): boolean => {
+    if (!currentUser) return false;
+    const rId = currentUser.roleId || currentUser.role || 'user';
+    if (rId === 'super_admin') return true;
+    if (currentUser.permissions?.includes('*')) return true;
+    return currentUser.permissions?.includes(perm) || false;
+  };
+
+  const authHeaders = {
+    'Content-Type': 'application/json',
+    'x-user-id': currentUser?.id || 'admin_super'
+  };
   const [fonts, setFonts] = useState<CustomFont[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -21,7 +37,9 @@ export default function Fonts() {
 
   async function fetchFonts() {
     try {
-      const res = await fetch(`${API_URL}/api/fonts`);
+      const res = await fetch(`${API_URL}/api/fonts`, {
+        headers: { 'x-user-id': currentUser?.id || 'admin_super' }
+      });
       const data = await res.json();
       setFonts(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -82,9 +100,13 @@ export default function Fonts() {
     };
 
     try {
+      if (!hasPermission('fonts.create')) {
+        useToastStore.getState().addToast('Access Denied. You lack the "fonts.create" permission.', 'warning');
+        return;
+      }
       const res = await fetch(`${API_URL}/api/fonts`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify(payload)
       });
 
@@ -109,9 +131,14 @@ export default function Fonts() {
     );
 
     try {
+      if (!hasPermission('fonts.edit')) {
+        setFonts(prev => prev.map(f => (f.id === id ? { ...f, isActive: activeState } : f)));
+        useToastStore.getState().addToast('Access Denied. You lack the "fonts.edit" permission.', 'warning');
+        return;
+      }
       const res = await fetch(`${API_URL}/api/fonts/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ isActive: !activeState })
       });
       if (!res.ok) {
@@ -136,11 +163,16 @@ export default function Fonts() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!hasPermission('fonts.delete')) {
+      useToastStore.getState().addToast('Access Denied. You lack the "fonts.delete" permission.', 'warning');
+      return;
+    }
     if (!confirm('Are you sure you want to delete this font? Templates using this font will fall back to default typography.')) return;
     
     try {
       const res = await fetch(`${API_URL}/api/fonts/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'x-user-id': currentUser?.id || 'admin_super' }
       });
       if (res.ok) {
         fetchFonts();
@@ -170,13 +202,15 @@ export default function Fonts() {
           <h3 className="text-lg font-bold text-wedding-charcoal-dark tracking-tight">Typography & Fonts</h3>
           <p className="text-xs text-gray-500 font-semibold">Upload wedding typography binaries (.ttf/.otf) and register layout families</p>
         </div>
-        <button
-          onClick={openAddModal}
-          className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5"
-        >
-          <PlusCircle className="w-5 h-5" />
-          Upload Font Asset
-        </button>
+        {hasPermission('fonts.create') && (
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-sm font-bold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5"
+          >
+            <PlusCircle className="w-5 h-5" />
+            Upload Font Asset
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -234,13 +268,15 @@ export default function Fonts() {
                     </button>
                   </td>
                   <td className="py-4 px-6 text-right">
-                    <button
-                      onClick={() => handleDelete(f.id)}
-                      className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-all duration-200"
-                      title="Delete Font Record"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {hasPermission('fonts.delete') && (
+                      <button
+                        onClick={() => handleDelete(f.id)}
+                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-all duration-200"
+                        title="Delete Font Record"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

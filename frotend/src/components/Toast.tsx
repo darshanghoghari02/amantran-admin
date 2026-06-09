@@ -109,7 +109,7 @@ export function ToastContainer() {
   return (
     <>
       <style>{premiumToastStyle}</style>
-      <div className="fixed top-6 right-6 z-9999 flex flex-col gap-4 max-w-sm w-full pointer-events-none items-end">
+      <div className="fixed top-6 right-6 flex flex-col gap-4 max-w-sm w-full pointer-events-none items-end" style={{ zIndex: 99999 }}>
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} />
         ))}

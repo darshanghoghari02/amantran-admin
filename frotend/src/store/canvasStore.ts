@@ -1594,6 +1594,10 @@ interface CanvasState {
   undo: () => void;
   redo: () => void;
   clearHistory: () => void;
+
+  // Authentication
+  currentUserId: string | null;
+  setCurrentUserId: (id: string | null) => void;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1610,7 +1614,7 @@ function triggerAutoSave(getState: () => CanvasState, setState: (partial: Partia
   setState({ autosaveStatus: 'saving' });
 
   _autoSaveTimer = setTimeout(async () => {
-    const { template } = getState();
+    const { template, currentUserId } = getState();
     if (!template || !template.id) {
       setState({ autosaveStatus: 'idle' });
       return;
@@ -1619,7 +1623,10 @@ function triggerAutoSave(getState: () => CanvasState, setState: (partial: Partia
     try {
       const res = await fetch(`${API_URL}/api/templates/${template.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': currentUserId || 'admin_super'
+        },
         body: JSON.stringify(template),
       });
 
@@ -1652,6 +1659,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   selectedLanguage: 'English',
   imageChooserElementId: null,
   isImageChooserOpen: false,
+  currentUserId: null,
+
+  setCurrentUserId: (currentUserId) => set({ currentUserId }),
 
   setImageChooserOpen: (isImageChooserOpen, imageChooserElementId = null) =>
     set({ isImageChooserOpen, imageChooserElementId }),

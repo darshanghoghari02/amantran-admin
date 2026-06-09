@@ -27,7 +27,8 @@ export default function RightPanel() {
     bringToFront,
     sendToBack,
     toggleLock,
-    selectedLanguage
+    selectedLanguage,
+    currentUserId
   } = useCanvasStore();
 
   const [isTranslating, setIsTranslating] = useState(false);
@@ -37,7 +38,9 @@ export default function RightPanel() {
     async function fetchAllFonts() {
       if (!template) return;
       try {
-        const res = await fetch(`${API_URL}/api/fonts`);
+        const res = await fetch(`${API_URL}/api/fonts`, {
+          headers: { 'x-user-id': currentUserId || 'admin_super' }
+        });
         const data = await res.json();
         if (Array.isArray(data)) {
           const fontFamilies = data.filter((f: any) => f.isActive).map((f: any) => f.family);

@@ -302,7 +302,7 @@ export default function RootPage() {
   if (currentTab === 'editor') {
     return (
       <main className="min-h-screen flex flex-col bg-wedding-bg">
-        <EditorWorkspace onClose={() => setCurrentTab('templates')} />
+        <EditorWorkspace onClose={() => setCurrentTab('templates')} currentUser={currentUser || undefined} />
       </main>
     );
   }

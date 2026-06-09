@@ -27,11 +27,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Custom font styling KAP011 (fallback to beautiful playfair display serif) */
-@font-face {
-  font-family: 'KAP011';
-  src: local('Playfair Display'), local('Georgia');
-}
 
 .font-kap011 {
   font-family: 'KAP011', 'Playfair Display', serif;

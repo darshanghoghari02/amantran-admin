@@ -19,12 +19,14 @@ import RightPanel from './RightPanel';
 import PreviewModal from './PreviewModal';
 import { translateText } from '../../utils/translate';
 import { useToastStore } from '../../store/toastStore';
+import type { User } from '@/types';
 
 interface EditorWorkspaceProps {
   onClose: () => void;
+  currentUser?: User;
 }
 
-export default function EditorWorkspace({ onClose }: EditorWorkspaceProps) {
+export default function EditorWorkspace({ onClose, currentUser }: EditorWorkspaceProps) {
   const {
     template,
     zoom,
@@ -42,8 +44,13 @@ export default function EditorWorkspace({ onClose }: EditorWorkspaceProps) {
     updateElement,
     deleteElement,
     duplicateElement,
-    updateTemplatePages
+    updateTemplatePages,
+    setCurrentUserId
   } = useCanvasStore();
+
+  useEffect(() => {
+    setCurrentUserId(currentUser?.id || 'admin_super');
+  }, [currentUser, setCurrentUserId]);
 
   const [savingManual, setSavingManual] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -208,7 +215,10 @@ export default function EditorWorkspace({ onClose }: EditorWorkspaceProps) {
     try {
       const res = await fetch(`${API_URL}/api/templates/${template.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser?.id || 'admin_super'
+        },
         body: JSON.stringify(template)
       });
 

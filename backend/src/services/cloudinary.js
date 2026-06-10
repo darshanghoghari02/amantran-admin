@@ -95,6 +95,16 @@ export function extractPublicId(url) {
     
     let afterUpload = url.substring(uploadIdx + '/upload/'.length);
     
+    // Remove query parameters or hash fragments
+    const questionMarkIdx = afterUpload.indexOf('?');
+    if (questionMarkIdx !== -1) {
+      afterUpload = afterUpload.substring(0, questionMarkIdx);
+    }
+    const hashIdx = afterUpload.indexOf('#');
+    if (hashIdx !== -1) {
+      afterUpload = afterUpload.substring(0, hashIdx);
+    }
+
     // Remove version prefix if present (e.g., "v1234567890/")
     if (/^v\d+\//.test(afterUpload)) {
       afterUpload = afterUpload.replace(/^v\d+\//, '');

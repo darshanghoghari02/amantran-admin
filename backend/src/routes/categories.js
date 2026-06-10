@@ -4,21 +4,48 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dbService } from '../services/db.js';
 import { requirePermission, logAuditEvent } from '../middleware/auth.js';
+import { deleteFromCloudinary, extractPublicId } from '../services/cloudinary.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const BACKEND_DIR = path.resolve(__dirname, '../..');
 const ASSETS_DIR = path.join(BACKEND_DIR, 'assets');
 
-// Helper: delete a local file safely (only inside assets/)
-function deleteLocalFile(filePath) {
+// Helper: delete a single asset file safely (supports Cloudinary, Firebase, and local files)
+async function deleteAssetFile(filePath) {
   if (!filePath) return;
   try {
-    const cleanPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+    // Handle Cloudinary URLs
+    if (filePath.includes('res.cloudinary.com')) {
+      const publicId = extractPublicId(filePath);
+      if (publicId) {
+        await deleteFromCloudinary(publicId);
+        console.log(`☁️ Deleted Cloudinary asset: ${publicId}`);
+      }
+      return;
+    }
+
+    // Handle Firebase Storage URLs (legacy — just log, no action needed)
+    if (filePath.startsWith('https://firebasestorage.googleapis.com')) {
+      console.log(`⏭️ Skipping legacy Firebase Storage URL: ${filePath}`);
+      return;
+    }
+
+    // Handle local files
+    let relativePath = filePath;
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      try {
+        const urlObj = new URL(filePath);
+        relativePath = urlObj.pathname;
+      } catch (e) {
+        // ignore parsing error
+      }
+    }
+    const cleanPath = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
     const absolutePath = path.join(BACKEND_DIR, cleanPath);
     if (absolutePath.startsWith(ASSETS_DIR) && fs.existsSync(absolutePath)) {
       fs.unlinkSync(absolutePath);
-      console.log(`🗑️ Deleted file: ${absolutePath}`);
+      console.log(`🗑️ Deleted local file: ${absolutePath}`);
     }
   } catch (err) {
     console.warn(`⚠️ Could not delete file ${filePath}:`, err.message);
@@ -82,6 +109,11 @@ router.put('/:id', requirePermission('categories.edit'), async (req, res) => {
     const { name, slug, imageUrl, displayOrder, isActive } = req.body;
     const userId = req.headers['x-user-id'];
     
+    const categoryToEdit = await dbService.getOne('categories', req.params.id);
+    if (!categoryToEdit) {
+      return res.status(404).json({ error: 'Category not found.' });
+    }
+
     const updates = {};
     if (name !== undefined) updates.name = name;
     if (slug !== undefined) updates.slug = slug.toLowerCase().replace(/[^a-z0-9_]/g, '_');
@@ -90,6 +122,12 @@ router.put('/:id', requirePermission('categories.edit'), async (req, res) => {
     if (isActive !== undefined) updates.isActive = isActive;
 
     const updated = await dbService.update('categories', req.params.id, updates);
+
+    // Clean up old category image if replaced
+    if (imageUrl !== undefined && categoryToEdit.imageUrl && categoryToEdit.imageUrl !== imageUrl) {
+      await deleteAssetFile(categoryToEdit.imageUrl);
+    }
+
     await logAuditEvent(userId, `Updated category: ${updated.name}`, 'Categories');
     res.json(updated);
   } catch (error) {
@@ -117,7 +155,7 @@ router.delete('/:id', requirePermission('categories.delete'), async (req, res) =
 
     // Step 2: Delete image file from disk
     if (category.imageUrl) {
-      deleteLocalFile(category.imageUrl);
+      await deleteAssetFile(category.imageUrl);
     }
 
     // Step 3: Delete DB record

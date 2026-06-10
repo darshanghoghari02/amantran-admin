@@ -132,17 +132,30 @@ export interface User {
   invitationCount: number;
   draftsCount: number;
   createdAt: string;
+  rating?: number | null;
+  subscription?: UserSubscription | null;
+}
+
+export interface Rating {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userPhone: string;
+  rating: number;
+  createdAt: string;
 }
 
 export interface UserSubscription {
   id: string;
   userId: string;
   type: string;
+  planType?: string;
   startDate: string;
   expiryDate: string;
   isActive: boolean;
   amountPaid: number;
-  createdAt: string;
+  createdAt?: string;
   updatedAt: string;
 }
 

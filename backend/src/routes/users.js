@@ -109,23 +109,65 @@ router.get('/app-users', requirePermission('users.view'), async (req, res) => {
     const list = await dbService.getAll('app_users');
     const { query } = req.query;
 
+    // Fetch ratings and user subscriptions to join them
+    let ratings = [];
+    let userSubscriptions = [];
+    try {
+      ratings = await dbService.getAll('ratings');
+    } catch (err) {
+      console.error('Error fetching ratings in user list:', err);
+    }
+    try {
+      userSubscriptions = await dbService.getAll('user_subscriptions');
+    } catch (err) {
+      console.error('Error fetching user subscriptions in user list:', err);
+    }
+
     // Normalize Firestore field names to a consistent frontend schema
-    let normalized = list.map(u => ({
-      id: u.id,
-      displayName: u.displayName || u.name || 'Anonymous User',
-      name: u.name || u.displayName || '',
-      email: u.email || '',
-      phone: u.phone || '',
-      provider: u.provider || 'phone',
-      profilePhoto: u.profilePhoto || '',
-      accountStatus: u.accountStatus || 'active',
-      // Normalize isBlocked: support both isBlocked field and accountStatus='suspended'
-      isBlocked: u.isBlocked === true || u.accountStatus === 'suspended',
-      invitationCount: u.invitationCount || 0,
-      draftsCount: u.draftsCount || 0,
-      createdAt: getSafeDateString(u.createdAt),
-      lastLoginAt: u.lastLoginAt ? getSafeDateString(u.lastLoginAt) : null
-    }));
+    let normalized = list.map(u => {
+      // Find user rating (latest first)
+      const userRatings = ratings.filter(r => r.userId === u.id);
+      userRatings.sort((a, b) => {
+        const dateA = getSafeDateString(a.createdAt);
+        const dateB = getSafeDateString(b.createdAt);
+        return dateB.localeCompare(dateA);
+      });
+      const latestRating = userRatings[0] ? Number(userRatings[0].rating) : null;
+
+      // Find active/existing subscription
+      const userSub = userSubscriptions.find(s => s.userId === u.id || s.id === u.id);
+      const subscription = userSub ? {
+        id: userSub.id,
+        userId: userSub.userId || userSub.id,
+        planType: userSub.planType || userSub.type || 'monthly',
+        type: userSub.planType || userSub.type || 'monthly',
+        isActive: userSub.isActive !== false,
+        startDate: userSub.startDate ? getSafeDateString(userSub.startDate) : null,
+        expiryDate: userSub.expiryDate ? getSafeDateString(userSub.expiryDate) : null,
+        amountPaid: Number(userSub.amountPaid) || 0,
+        purchasedTemplates: userSub.purchasedTemplates || [],
+        updatedAt: userSub.updatedAt ? getSafeDateString(userSub.updatedAt) : null
+      } : null;
+
+      return {
+        id: u.id,
+        displayName: u.displayName || u.name || 'Anonymous User',
+        name: u.name || u.displayName || '',
+        email: u.email || '',
+        phone: u.phone || '',
+        provider: u.provider || 'phone',
+        profilePhoto: u.profilePhoto || '',
+        accountStatus: u.accountStatus || 'active',
+        // Normalize isBlocked: support both isBlocked field and accountStatus='suspended'
+        isBlocked: u.isBlocked === true || u.accountStatus === 'suspended',
+        invitationCount: u.invitationCount || 0,
+        draftsCount: u.draftsCount || 0,
+        createdAt: getSafeDateString(u.createdAt),
+        lastLoginAt: u.lastLoginAt ? getSafeDateString(u.lastLoginAt) : null,
+        rating: latestRating,
+        subscription: subscription
+      };
+    });
 
     if (query) {
       const q = query.toLowerCase();

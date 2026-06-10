@@ -14,9 +14,15 @@ import {
   Shield,
   ChevronDown,
   Lock,
-  Smartphone
+  Smartphone,
+  CreditCard,
+  Star,
+  Sparkles,
+  Calendar,
+  DollarSign,
+  Award
 } from 'lucide-react';
-import { User, Role } from '../types';
+import { User, Role, SubscriptionPlan, Rating } from '../types';
 import { useToastStore } from '../store/toastStore';
 
 // Granular permission keys from the RBAC system (mirrored from auth.js)
@@ -88,6 +94,21 @@ export default function Users({ currentUser }: UsersComponentProps) {
   const [isCustomPermissions, setIsCustomPermissions] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Subscription & Ratings Modal States
+  const [isSubModalOpen, setIsSubModalOpen] = useState(false);
+  const [subSelectedUser, setSubSelectedUser] = useState<User | null>(null);
+  const [globalPlans, setGlobalPlans] = useState<SubscriptionPlan[]>([]);
+  const [userRatingsHistory, setUserRatingsHistory] = useState<Rating[]>([]);
+  const [loadingRatings, setLoadingRatings] = useState(false);
+  
+  const [subPlanType, setSubPlanType] = useState('monthly');
+  const [subStartDate, setSubStartDate] = useState('');
+  const [subExpiryDate, setSubExpiryDate] = useState('');
+  const [subAmountPaid, setSubAmountPaid] = useState(0);
+  const [subIsActive, setSubIsActive] = useState(true);
+  const [subSaving, setSubSaving] = useState(false);
+  const [subRevoking, setSubRevoking] = useState(false);
 
   // Permission helper
   const hasPermission = (permission: string): boolean => {
@@ -273,6 +294,162 @@ export default function Users({ currentUser }: UsersComponentProps) {
       }
     } catch (error) {
       addToast('Network error. Failed to delete user.', 'error');
+    }
+  };
+
+  const openSubscriptionModal = async (user: User) => {
+    setSubSelectedUser(user);
+    // Initialize form states
+    const sub = user.subscription;
+    if (sub) {
+      setSubPlanType(sub.planType || sub.type || 'monthly');
+      setSubStartDate(sub.startDate ? sub.startDate.split('T')[0] : new Date().toISOString().split('T')[0]);
+      setSubExpiryDate(sub.expiryDate ? sub.expiryDate.split('T')[0] : new Date().toISOString().split('T')[0]);
+      setSubAmountPaid(sub.amountPaid || 0);
+      setSubIsActive(sub.isActive !== false);
+    } else {
+      setSubPlanType('monthly');
+      setSubStartDate(new Date().toISOString().split('T')[0]);
+      // Expiry defaults to 30 days from now
+      const thirtyDays = new Date();
+      thirtyDays.setDate(thirtyDays.getDate() + 30);
+      setSubExpiryDate(thirtyDays.toISOString().split('T')[0]);
+      setSubAmountPaid(99); // standard monthly price seed
+      setSubIsActive(true);
+    }
+    
+    setIsSubModalOpen(true);
+    setLoadingRatings(true);
+    setUserRatingsHistory([]);
+    
+    try {
+      // Fetch user's rating history
+      const headers = { 'x-user-id': currentUser?.id || 'admin_super' };
+      const ratingRes = await fetch(`${API_URL}/api/ratings/user/${user.id}`, { headers });
+      if (ratingRes.ok) {
+        const ratingData = await ratingRes.json();
+        setUserRatingsHistory(Array.isArray(ratingData) ? ratingData : []);
+      }
+      
+      // Fetch global plans
+      const plansRes = await fetch(`${API_URL}/api/subscriptions`, { headers });
+      if (plansRes.ok) {
+        const plansData = await plansRes.json();
+        setGlobalPlans(Array.isArray(plansData) ? plansData : []);
+      }
+    } catch (error) {
+      console.error('Error fetching subscription/rating modal data:', error);
+    } finally {
+      setLoadingRatings(false);
+    }
+  };
+
+  const handlePlanTypeChange = (planId: string) => {
+    setSubPlanType(planId);
+    const plan = globalPlans.find(p => p.id === planId);
+    if (plan) {
+      setSubAmountPaid(plan.price || 0);
+      
+      // Calculate duration
+      const durationType = plan.durationType || 'monthly';
+      const durationDays = plan.durationDays || 30;
+      const start = new Date(subStartDate || new Date());
+      const end = new Date(start);
+      
+      if (durationType === '1day') {
+        end.setDate(end.getDate() + 1);
+      } else if (durationType === 'weekly') {
+        end.setDate(end.getDate() + 7);
+      } else if (durationType === 'monthly') {
+        end.setMonth(end.getMonth() + 1);
+      } else if (durationType === 'yearly') {
+        end.setFullYear(end.getFullYear() + 1);
+      } else if (durationType === 'custom') {
+        end.setDate(end.getDate() + durationDays);
+      } else {
+        end.setDate(end.getDate() + 30);
+      }
+      setSubExpiryDate(end.toISOString().split('T')[0]);
+    }
+  };
+
+  const handleSaveSubscription = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subSelectedUser) return;
+    
+    setSubSaving(true);
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'x-user-id': currentUser?.id || 'admin_super'
+      };
+      
+      // Check if user already had a subscription record
+      const hasSubRecord = !!subSelectedUser.subscription;
+      const endpoint = hasSubRecord
+        ? `${API_URL}/api/user-subscriptions/${subSelectedUser.id}`
+        : `${API_URL}/api/user-subscriptions`;
+      
+      const method = hasSubRecord ? 'PUT' : 'POST';
+      const body = {
+        userId: subSelectedUser.id,
+        planType: subPlanType,
+        type: subPlanType,
+        startDate: new Date(subStartDate).toISOString(),
+        expiryDate: new Date(subExpiryDate).toISOString(),
+        isActive: subIsActive,
+        amountPaid: Number(subAmountPaid) || 0
+      };
+      
+      const res = await fetch(endpoint, {
+        method,
+        headers,
+        body: JSON.stringify(body)
+      });
+      
+      if (res.ok) {
+        addToast(hasSubRecord ? 'User subscription updated successfully!' : 'User subscription granted successfully!', 'success');
+        setIsSubModalOpen(false);
+        fetchInitialData();
+      } else {
+        const data = await res.json();
+        addToast(data.error || 'Failed to save subscription.', 'error');
+      }
+    } catch (error) {
+      console.error('Error saving subscription:', error);
+      addToast('Network error. Failed to save subscription.', 'error');
+    } finally {
+      setSubSaving(false);
+    }
+  };
+
+  const handleRevokeSubscription = async () => {
+    if (!subSelectedUser) return;
+    if (!confirm('Are you sure you want to revoke this user\'s subscription? This will immediately suspend their premium access.')) return;
+    
+    setSubRevoking(true);
+    try {
+      const headers = {
+        'x-user-id': currentUser?.id || 'admin_super'
+      };
+      const res = await fetch(`${API_URL}/api/user-subscriptions/${subSelectedUser.id}`, {
+        method: 'DELETE',
+        headers
+      });
+      
+      if (res.ok) {
+        addToast('Subscription revoked successfully!', 'success');
+        setIsSubModalOpen(false);
+        fetchInitialData();
+      } else {
+        const data = await res.json();
+        addToast(data.error || 'Failed to revoke subscription.', 'error');
+      }
+    } catch (error) {
+      console.error('Error revoking subscription:', error);
+      addToast('Network error. Failed to revoke subscription.', 'error');
+    } finally {
+      setSubRevoking(false);
     }
   };
 
@@ -569,6 +746,8 @@ export default function Users({ currentUser }: UsersComponentProps) {
                       <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-wider">Mobile User</th>
                       <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-wider">Contact Info</th>
                       <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-wider">Auth Provider</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-wider">Subscription</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-wider">Rating</th>
                       <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-wider">Last Login</th>
                       <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-wider">Status</th>
                       <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase tracking-wider text-right">Actions</th>
@@ -577,7 +756,7 @@ export default function Users({ currentUser }: UsersComponentProps) {
                   <tbody className="divide-y divide-gray-100">
                     {appUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-16 text-center">
+                        <td colSpan={8} className="py-16 text-center">
                           <div className="flex flex-col items-center gap-3 text-gray-400">
                             <Smartphone className="w-10 h-10 text-gray-200" />
                             <p className="text-sm font-bold text-gray-500">No app users found matching search criteria.</p>
@@ -645,6 +824,42 @@ export default function Users({ currentUser }: UsersComponentProps) {
                               </span>
                             </td>
                             <td className="px-6 py-4">
+                              {user.subscription && user.subscription.isActive ? (
+                                <div>
+                                  <span className="px-2 py-0.5 text-[11px] font-bold rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 capitalize flex items-center gap-1 w-fit">
+                                    <Sparkles className="w-3 h-3 fill-emerald-400 text-emerald-600" />
+                                    {user.subscription.planType || user.subscription.type}
+                                  </span>
+                                  <span className="text-[9px] text-gray-400 block mt-0.5 font-semibold">
+                                    Exp: {new Date(user.subscription.expiryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                                  </span>
+                                </div>
+                              ) : user.subscription && !user.subscription.isActive ? (
+                                <div>
+                                  <span className="px-2 py-0.5 text-[11px] font-bold rounded-lg bg-gray-50 text-gray-500 border border-gray-200 capitalize flex items-center gap-1 w-fit">
+                                    Expired
+                                  </span>
+                                  <span className="text-[9px] text-gray-400 block mt-0.5 font-mono">
+                                    ({user.subscription.planType || user.subscription.type})
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="px-2 py-0.5 text-[11px] font-bold rounded-lg bg-gray-50 text-gray-400 border border-gray-100 w-fit">
+                                  None / Free
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              {user.rating !== undefined && user.rating !== null ? (
+                                <div className="flex items-center gap-1">
+                                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                                  <span className="text-xs font-bold text-wedding-charcoal-dark">{user.rating}</span>
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-gray-400 italic">No rating</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
                               <span className="text-[11px] text-gray-600 font-semibold whitespace-nowrap">
                                 {formatLoginDate(user.lastLoginAt || user.createdAt)}
                               </span>
@@ -662,6 +877,16 @@ export default function Users({ currentUser }: UsersComponentProps) {
                             </td>
                             <td className="px-6 py-4 text-right">
                               <div className="flex justify-end items-center gap-2">
+                                {canEdit && (
+                                  <button
+                                    onClick={() => openSubscriptionModal(user)}
+                                    className="p-2 text-gray-400 hover:text-wedding-pink-dark hover:bg-wedding-pink-light/10 rounded-xl transition-all border border-transparent hover:border-wedding-pink-medium/20"
+                                    title="Manage Subscription & Ratings"
+                                  >
+                                    <CreditCard className="w-4 h-4" />
+                                  </button>
+                                )}
+
                                 {canSuspend && (
                                   <button
                                     onClick={() => handleToggleBlock(user.id, user.isBlocked)}
@@ -934,6 +1159,293 @@ export default function Users({ currentUser }: UsersComponentProps) {
               </div>
 
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* SUBSCRIPTION & RATINGS MANAGEMENT MODAL */}
+      {isSubModalOpen && subSelectedUser && (
+        <div className="fixed inset-0 bg-wedding-charcoal-dark/60 backdrop-blur-xs z-9999 flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+          <div className="bg-white border border-wedding-pink-medium/20 w-full max-w-4xl rounded-[32px] shadow-2xl overflow-hidden my-8 animate-slideUp">
+            
+            {/* Modal Header */}
+            <div className="p-6 bg-wedding-charcoal-dark text-white flex justify-between items-center">
+              <div>
+                <h4 className="font-bold text-base text-wedding-gold-light flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-wedding-gold-light" />
+                  Manage Subscription & Ratings
+                </h4>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  Configure premium subscription access and view user feedback ratings.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsSubModalOpen(false)}
+                className="text-gray-400 hover:text-white bg-wedding-charcoal-light/60 hover:bg-wedding-charcoal-light p-2 rounded-xl transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
+              
+              {/* Left Column: User Snapshot & Ratings */}
+              <div className="lg:col-span-5 p-6 bg-gray-50/50 space-y-6">
+                
+                {/* User Snapshot Card */}
+                <div className="p-4 rounded-2xl border border-[#FFCAD2]/40 bg-white shadow-sm space-y-4">
+                  <div className="flex items-center gap-3">
+                    {subSelectedUser.profilePhoto ? (
+                      <img
+                        src={subSelectedUser.profilePhoto}
+                        alt={subSelectedUser.displayName}
+                        className="w-12 h-12 rounded-full object-cover border-2 border-wedding-pink-medium/30 shadow-sm"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-wedding-pink-light flex items-center justify-center font-extrabold text-wedding-pink-dark text-base border border-wedding-pink-medium/30">
+                        {(subSelectedUser.displayName || subSelectedUser.phone || 'US').slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <h5 className="font-bold text-wedding-charcoal-dark text-sm leading-tight">
+                        {subSelectedUser.displayName || 'Anonymous User'}
+                      </h5>
+                      <span className="text-[9px] text-gray-400 font-mono block truncate max-w-[180px]">
+                        ID: {subSelectedUser.id}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 text-xs border-t border-gray-100 pt-3">
+                    {subSelectedUser.phone && (
+                      <p className="font-semibold text-wedding-charcoal-dark flex items-center gap-1.5">
+                        <span className="text-gray-400">📞</span> {subSelectedUser.phone}
+                      </p>
+                    )}
+                    {subSelectedUser.email && (
+                      <p className="text-gray-500 font-mono text-[11px] flex items-center gap-1.5 truncate">
+                        <span className="text-gray-400">✉️</span> {subSelectedUser.email}
+                      </p>
+                    )}
+                    <p className="text-gray-500 flex items-center gap-1.5">
+                      <span className="text-gray-400">🛡️</span> Provider: <span className="font-bold uppercase text-[10px]">{subSelectedUser.provider || 'phone'}</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Ratings History Card */}
+                <div className="space-y-3">
+                  <h5 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                    Ratings History ({userRatingsHistory.length})
+                  </h5>
+
+                  {loadingRatings ? (
+                    <div className="py-6 text-center text-gray-400 text-xs">
+                      Loading ratings...
+                    </div>
+                  ) : userRatingsHistory.length === 0 ? (
+                    <div className="p-4 bg-white rounded-2xl border border-dashed border-gray-200 text-center text-xs text-gray-400 font-medium italic">
+                      No ratings submitted yet.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                      {userRatingsHistory.map((r) => (
+                        <div key={r.id} className="p-3 bg-white border border-gray-100 rounded-xl flex items-center justify-between shadow-xs">
+                          <div>
+                            <div className="flex items-center gap-1">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`w-3 h-3 ${
+                                    i < r.rating
+                                      ? 'text-amber-500 fill-amber-400'
+                                      : 'text-gray-200'
+                                  }`}
+                                />
+                              ))}
+                              <span className="text-xs font-bold text-wedding-charcoal-dark ml-1 mt-0.5">
+                                {r.rating}.0
+                              </span>
+                            </div>
+                            <span className="text-[9px] text-gray-400 block mt-0.5">
+                              {r.userName || r.userEmail || 'User'}
+                            </span>
+                          </div>
+                          <span className="text-[9px] text-gray-400 font-mono">
+                            {new Date(r.createdAt).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {/* Right Column: Edit Subscription Form */}
+              <form onSubmit={handleSaveSubscription} className="lg:col-span-7 p-6 space-y-5">
+                <div className="space-y-4">
+                  <h5 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-wedding-pink-dark" />
+                    Active Plan Configuration
+                  </h5>
+
+                  {subSelectedUser.subscription && subSelectedUser.subscription.isActive ? (
+                    <div className="p-4 bg-emerald-50/50 border border-emerald-200/50 rounded-2xl flex items-start gap-3">
+                      <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700 mt-0.5">
+                        <Award className="w-4 h-4 fill-emerald-500/20" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-emerald-800">
+                          Active Premium Subscription
+                        </p>
+                        <p className="text-[10px] text-emerald-600 mt-0.5">
+                          Currently subscribed to <span className="font-bold uppercase">{subSelectedUser.subscription.planType || subSelectedUser.subscription.type}</span>.
+                          Expires on {new Date(subSelectedUser.subscription.expiryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-gray-50 border border-gray-200/50 rounded-2xl flex items-start gap-3">
+                      <div className="p-2 rounded-xl bg-gray-100 text-gray-500 mt-0.5">
+                        <CreditCard className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-gray-700">
+                          No Active Premium Subscription
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">
+                          User is on the standard free plan. Use the settings below to grant or assign premium access.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Plan Type Selection */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
+                      Subscription Plan Type *
+                    </label>
+                    <select
+                      value={subPlanType}
+                      onChange={(e) => handlePlanTypeChange(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-[#FFF5F6]/40 border border-[#FFCAD2]/60 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/25 focus:bg-white font-semibold transition-all"
+                    >
+                      <option value="monthly">Monthly Premium</option>
+                      <option value="yearly">Yearly Premium</option>
+                      {globalPlans
+                        .filter((p) => p.id !== 'monthly' && p.id !== 'yearly')
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  {/* Start & End Dates */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
+                        Start Date
+                      </label>
+                      <input
+                        type="date"
+                        value={subStartDate}
+                        onChange={(e) => setSubStartDate(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-[#FFF5F6]/40 border border-[#FFCAD2]/60 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/25 focus:bg-white font-semibold transition-all"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
+                        Expiry Date *
+                      </label>
+                      <input
+                        type="date"
+                        value={subExpiryDate}
+                        onChange={(e) => setSubExpiryDate(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-[#FFF5F6]/40 border border-[#FFCAD2]/60 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/25 focus:bg-white font-semibold transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Amount Paid */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
+                      Amount Paid (INR / INR Equivalent)
+                    </label>
+                    <input
+                      type="number"
+                      value={subAmountPaid}
+                      onChange={(e) => setSubAmountPaid(Number(e.target.value) || 0)}
+                      placeholder="e.g. 99"
+                      className="w-full px-4 py-3 rounded-xl bg-[#FFF5F6]/40 border border-[#FFCAD2]/60 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/25 focus:bg-white font-semibold transition-all"
+                    />
+                  </div>
+
+                  {/* Active Status toggle */}
+                  <div className="flex items-center justify-between p-4 bg-[#FFF5F6]/30 border border-[#FFCAD2]/40 rounded-2xl">
+                    <div>
+                      <label className="text-xs font-bold text-wedding-charcoal-dark block">
+                        Subscription Active Status
+                      </label>
+                      <span className="text-[10px] text-gray-400 font-semibold mt-0.5 block">
+                        Toggle premium access activation status immediately
+                      </span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={subIsActive}
+                        onChange={(e) => setSubIsActive(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-wedding-pink-dark"></div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Form Action Buttons */}
+                <div className="pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
+                  {subSelectedUser.subscription ? (
+                    <button
+                      type="button"
+                      disabled={subRevoking}
+                      onClick={handleRevokeSubscription}
+                      className="px-4 py-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition-all border border-red-200/50 flex items-center gap-1.5"
+                    >
+                      Revoke Plan
+                    </button>
+                  ) : (
+                    <div />
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsSubModalOpen(false)}
+                      className="px-5 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={subSaving}
+                      className="px-6 py-3 rounded-xl bg-wedding-charcoal-dark hover:bg-wedding-charcoal-light text-wedding-gold-light hover:text-white text-xs font-bold shadow-lg transition-all disabled:opacity-50"
+                    >
+                      {subSaving ? 'Saving...' : subSelectedUser.subscription ? 'Update Subscription' : 'Grant Subscription'}
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+            </div>
           </div>
         </div>
       )}

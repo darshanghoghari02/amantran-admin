@@ -4,7 +4,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { upload } from '../middleware/upload.js';
 import { dbService } from '../services/db.js';
-import admin from 'firebase-admin';
+import { uploadToCloudinary, deleteFromCloudinary, extractPublicId, isCloudinaryConfigured } from '../services/cloudinary.js';
 
 const router = express.Router();
 
@@ -13,36 +13,51 @@ const __dirname = path.dirname(__filename);
 const BACKEND_DIR = path.resolve(__dirname, '../..');
 const ASSETS_DIR = path.join(BACKEND_DIR, 'assets');
 
-// Helper to upload a single local file to Firebase Storage and delete local file on success
-async function uploadToFirebaseStorage(localFilePath, mimeType) {
-  if (!dbService.isFirebase) return null;
-  
+/**
+ * Helper to upload a single local file to Cloudinary and delete temp file on success.
+ * Falls back to local path only if Cloudinary is not configured (dev mode).
+ */
+async function uploadFileToCloud(localFilePath, queryParams) {
+  // Build a Cloudinary folder based on the upload type/category/template
+  const { type, categorySlug, templateSlug } = queryParams || {};
+  let folder = 'amantran/assets';
+
+  if (type === 'font') {
+    folder = 'amantran/fonts';
+  } else if (type === 'sticker') {
+    folder = 'amantran/images/stickers';
+  } else if (type === 'category') {
+    folder = `amantran/images/${categorySlug || 'categories'}`;
+  } else if (type === 'template') {
+    const cat = categorySlug || 'uncategorized';
+    const tpl = templateSlug || 'temp_template';
+    folder = `amantran/images/${cat}/${tpl}`;
+  } else {
+    folder = 'amantran/images/general';
+  }
+
+  if (!isCloudinaryConfigured()) {
+    console.warn('⚠️ Cloudinary is NOT configured. Saving to local disk as fallback (images will be lost on Render restart!).');
+    return null;
+  }
+
   try {
-    const bucket = admin.storage().bucket();
-    const relativePathOnDisk = path.relative(ASSETS_DIR, localFilePath).replace(/\\/g, '/');
-    const destination = `assets/${relativePathOnDisk}`;
+    const result = await uploadToCloudinary(localFilePath, folder);
 
-    await bucket.upload(localFilePath, {
-      destination: destination,
-      public: true,
-      metadata: {
-        contentType: mimeType
-      }
-    });
-
-    const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(destination)}?alt=media`;
-    
-    // Clean up local file from disk after successful cloud upload
+    // Clean up local temp file after successful cloud upload
     try {
       fs.unlinkSync(localFilePath);
     } catch (e) {
       console.warn(`⚠️ Failed to delete local temp file at ${localFilePath}:`, e.message);
     }
 
-    return publicUrl;
+    console.log(`☁️ Cloudinary upload success: ${result.secureUrl}`);
+    return result.secureUrl;
   } catch (err) {
-    console.error("⚠️ Firebase Storage upload failed, falling back to local file path:", err.message);
-    return null;
+    console.error('⚠️ Cloudinary upload FAILED:', err.message);
+    // In production, we should NOT silently fall back - the image will be lost on restart
+    // Throw error so the client knows the upload failed
+    throw new Error(`Cloud upload failed: ${err.message}. Please check Cloudinary configuration.`);
   }
 }
 
@@ -53,28 +68,40 @@ router.post('/single', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded.' });
     }
 
-    // Try uploading to Firebase Storage first
-    const cloudUrl = await uploadToFirebaseStorage(req.file.path, req.file.mimetype);
+    try {
+      // Upload to Cloudinary
+      const cloudUrl = await uploadFileToCloud(req.file.path, req.query);
 
-    if (cloudUrl) {
-      return res.json({
-        success: true,
-        message: 'File uploaded successfully to cloud!',
-        filePath: cloudUrl,
-        flutterPath: cloudUrl,
-        fileName: req.file.filename,
-        size: req.file.size
-      });
+      if (cloudUrl) {
+        return res.json({
+          success: true,
+          message: 'File uploaded successfully to Cloudinary!',
+          filePath: cloudUrl,
+          flutterPath: cloudUrl,
+          fileName: req.file.filename,
+          size: req.file.size
+        });
+      }
+    } catch (cloudErr) {
+      // If Cloudinary is configured but upload failed, return error (don't silently fallback)
+      if (isCloudinaryConfigured()) {
+        // Clean up local temp file
+        try { fs.unlinkSync(req.file.path); } catch (_) {}
+        return res.status(500).json({
+          error: cloudErr.message,
+          hint: 'Cloudinary upload failed. Please verify your CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET environment variables.'
+        });
+      }
     }
 
-    // Fallback: Local disk path resolution
+    // Fallback: Local disk path resolution (only when Cloudinary is NOT configured — dev mode)
     const relativePath = path.relative(BACKEND_DIR, req.file.path).replace(/\\/g, '/');
     const webUrl = `/${relativePath}`;
     const flutterPath = relativePath;
 
     res.json({
       success: true,
-      message: 'File uploaded successfully to local storage fallback!',
+      message: 'File uploaded to local storage (Cloudinary not configured — dev mode).',
       filePath: webUrl,
       flutterPath: flutterPath,
       fileName: req.file.filename,
@@ -93,32 +120,48 @@ router.post('/multiple', upload.array('files', 15), async (req, res) => {
     }
 
     const uploadedFiles = [];
+    const errors = [];
 
     for (const file of req.files) {
-      const cloudUrl = await uploadToFirebaseStorage(file.path, file.mimetype);
+      try {
+        const cloudUrl = await uploadFileToCloud(file.path, req.query);
 
-      if (cloudUrl) {
-        uploadedFiles.push({
-          filePath: cloudUrl,
-          flutterPath: cloudUrl,
-          fileName: file.filename,
-          size: file.size
-        });
-      } else {
-        const relativePath = path.relative(BACKEND_DIR, file.path).replace(/\\/g, '/');
-        uploadedFiles.push({
-          filePath: `/${relativePath}`,
-          flutterPath: relativePath,
-          fileName: file.filename,
-          size: file.size
-        });
+        if (cloudUrl) {
+          uploadedFiles.push({
+            filePath: cloudUrl,
+            flutterPath: cloudUrl,
+            fileName: file.filename,
+            size: file.size
+          });
+        } else {
+          // Cloudinary not configured — local fallback (dev mode)
+          const relativePath = path.relative(BACKEND_DIR, file.path).replace(/\\/g, '/');
+          uploadedFiles.push({
+            filePath: `/${relativePath}`,
+            flutterPath: relativePath,
+            fileName: file.filename,
+            size: file.size
+          });
+        }
+      } catch (uploadErr) {
+        errors.push({ fileName: file.filename, error: uploadErr.message });
+        // Clean up temp file on failed cloud upload
+        try { fs.unlinkSync(file.path); } catch (_) {}
       }
+    }
+
+    if (uploadedFiles.length === 0 && errors.length > 0) {
+      return res.status(500).json({
+        error: 'All file uploads failed.',
+        details: errors
+      });
     }
 
     res.json({
       success: true,
-      message: `${uploadedFiles.length} files uploaded successfully!`,
-      files: uploadedFiles
+      message: `${uploadedFiles.length} files uploaded successfully!${errors.length > 0 ? ` (${errors.length} failed)` : ''}`,
+      files: uploadedFiles,
+      errors: errors.length > 0 ? errors : undefined
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -133,22 +176,27 @@ router.delete('/', async (req, res) => {
       return res.status(400).json({ error: 'filePath parameter is required.' });
     }
 
-    // If it's a cloud Firebase Storage URL, delete from cloud
-    if (filePath.startsWith('https://firebasestorage.googleapis.com')) {
-      if (dbService.isFirebase) {
-        try {
-          const bucket = admin.storage().bucket();
-          // Extract file path from URL
-          const decodedPath = decodeURIComponent(filePath.split('/o/')[1].split('?')[0]);
-          await bucket.file(decodedPath).delete();
-          return res.json({ success: true, message: `Cloud file ${decodedPath} deleted successfully.` });
-        } catch (err) {
-          console.error("Failed to delete cloud file:", err.message);
-          return res.status(500).json({ error: `Failed to delete cloud file: ${err.message}` });
-        }
-      } else {
-        return res.status(400).json({ error: 'Firebase is not active. Cannot delete cloud file.' });
+    // If it's a Cloudinary URL, delete from Cloudinary
+    if (filePath.includes('res.cloudinary.com')) {
+      const publicId = extractPublicId(filePath);
+      if (publicId) {
+        const deleted = await deleteFromCloudinary(publicId);
+        return res.json({
+          success: true,
+          message: deleted
+            ? `Cloudinary file ${publicId} deleted successfully.`
+            : `Cloudinary file ${publicId} not found or already deleted.`
+        });
       }
+      return res.status(400).json({ error: 'Could not extract public_id from Cloudinary URL.' });
+    }
+
+    // If it's a Firebase Storage URL (legacy), just acknowledge
+    if (filePath.startsWith('https://firebasestorage.googleapis.com')) {
+      return res.json({
+        success: true,
+        message: 'Legacy Firebase Storage URL acknowledged. No action taken (images are now on Cloudinary).'
+      });
     }
 
     // Fallback: Delete local file
@@ -168,6 +216,16 @@ router.delete('/', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// Endpoint: GET /status — check Cloudinary configuration status
+router.get('/status', (req, res) => {
+  res.json({
+    cloudinaryConfigured: isCloudinaryConfigured(),
+    message: isCloudinaryConfigured()
+      ? '✅ Cloudinary is configured and ready for uploads.'
+      : '⚠️ Cloudinary is NOT configured. Uploads will go to ephemeral local disk. Set CLOUDINARY_URL env variable.'
+  });
 });
 
 export default router;

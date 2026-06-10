@@ -21,6 +21,7 @@ import transactionRoutes from './src/routes/transactions.js';
 import auditLogRoutes from './src/routes/audit-logs.js';
 import settingsRoutes from './src/routes/settings.js';
 import { dbService } from './src/services/db.js';
+import { isCloudinaryConfigured } from './src/services/cloudinary.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -114,14 +115,18 @@ app.get('/', (req, res) => {
 app.get('/api/diagnose', (req, res) => {
   res.json({
     isFirebaseConnected: dbService.isFirebase,
+    isCloudinaryConfigured: isCloudinaryConfigured(),
     firebaseDatabaseId: process.env.FIREBASE_DATABASE_ID || '(default)',
     hasServiceAccountKeyEnv: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
     serviceAccountKeyLength: process.env.FIREBASE_SERVICE_ACCOUNT_JSON ? process.env.FIREBASE_SERVICE_ACCOUNT_JSON.length : 0,
     connectionError: dbService.connectionError || 'None',
+    imageStorage: isCloudinaryConfigured() ? 'Cloudinary (persistent)' : 'Local disk (ephemeral — images will be lost on restart!)',
     environment: {
       nodeVersion: process.version,
       platform: process.platform,
-      hasEnvKey: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON
+      hasEnvKey: !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
+      hasCloudinaryUrl: !!process.env.CLOUDINARY_URL,
+      hasCloudinaryKeys: !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)
     }
   });
 });
@@ -173,4 +178,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Amantran CMS Backend running at http://localhost:${PORT}`);
+  console.log(`☁️ Cloudinary: ${isCloudinaryConfigured() ? '✅ Configured — images will persist permanently' : '⚠️ NOT configured — images will be lost on restart! Set CLOUDINARY_URL env variable.'}`);
 });

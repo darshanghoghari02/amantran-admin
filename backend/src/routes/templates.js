@@ -4,18 +4,35 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dbService } from '../services/db.js';
 import { requirePermission, getUserPermissions, logAuditEvent } from '../middleware/auth.js';
+import { deleteFromCloudinary, extractPublicId } from '../services/cloudinary.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const BACKEND_DIR = path.resolve(__dirname, '../..');
 const ASSETS_DIR = path.join(BACKEND_DIR, 'assets');
 
-// Helper: delete a single local file safely (only inside assets/)
-function deleteLocalFile(filePath) {
+// Helper: delete a single asset file safely (supports Cloudinary URLs, Firebase URLs, and local files)
+async function deleteAssetFile(filePath) {
   if (!filePath) return;
   try {
+    // Handle Cloudinary URLs
+    if (filePath.includes('res.cloudinary.com')) {
+      const publicId = extractPublicId(filePath);
+      if (publicId) {
+        await deleteFromCloudinary(publicId);
+        console.log(`☁️ Deleted Cloudinary asset: ${publicId}`);
+      }
+      return;
+    }
+
+    // Handle Firebase Storage URLs (legacy — just log, no action needed)
+    if (filePath.startsWith('https://firebasestorage.googleapis.com')) {
+      console.log(`⏭️ Skipping legacy Firebase Storage URL: ${filePath}`);
+      return;
+    }
+
+    // Handle local files
     let relativePath = filePath;
-    // If it's a full URL, extract the pathname part (e.g. /assets/...)
     if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
       try {
         const urlObj = new URL(filePath);
@@ -28,7 +45,7 @@ function deleteLocalFile(filePath) {
     const absolutePath = path.join(BACKEND_DIR, cleanPath);
     if (absolutePath.startsWith(ASSETS_DIR) && fs.existsSync(absolutePath)) {
       fs.unlinkSync(absolutePath);
-      console.log(`🗑️ Deleted file: ${absolutePath}`);
+      console.log(`🗑️ Deleted local file: ${absolutePath}`);
     }
   } catch (err) {
     console.warn(`⚠️ Could not delete file ${filePath}:`, err.message);
@@ -263,11 +280,11 @@ router.delete('/:id', requirePermission('templates.delete'), async (req, res) =>
         }
         if (Array.isArray(page.elements)) {
           page.elements.forEach(elem => {
-            // Include custom element stickers or uploaded overlay images specific to this template
-            if (elem.imagePath && elem.imagePath.includes(`/${template.slug}/`)) {
+            // Include custom element stickers or uploaded overlay images
+            if (elem.imagePath && (elem.imagePath.includes(`/${template.slug}/`) || elem.imagePath.includes('res.cloudinary.com'))) {
               allPaths.add(elem.imagePath);
             }
-            if (elem.imageUrl && elem.imageUrl.includes(`/${template.slug}/`)) {
+            if (elem.imageUrl && (elem.imageUrl.includes(`/${template.slug}/`) || elem.imageUrl.includes('res.cloudinary.com'))) {
               allPaths.add(elem.imageUrl);
             }
           });
@@ -275,10 +292,12 @@ router.delete('/:id', requirePermission('templates.delete'), async (req, res) =>
       });
     }
 
-    // Step 3: Delete each file from disk
-    allPaths.forEach(filePath => deleteLocalFile(filePath));
+    // Step 3: Delete each file (supports Cloudinary, Firebase, and local)
+    const deletePromises = [];
+    allPaths.forEach(filePath => deletePromises.push(deleteAssetFile(filePath)));
+    await Promise.allSettled(deletePromises);
 
-    // Step 4: Try to remove the now-empty template folder
+    // Step 4: Try to remove the now-empty template folder (local only)
     if (template.slug) {
       // Template images are stored under assets/images/<categorySlug>/<templateSlug>/
       // Find the category to get its slug
@@ -294,7 +313,7 @@ router.delete('/:id', requirePermission('templates.delete'), async (req, res) =>
     await logAuditEvent(userId, `Deleted template: ${template.name}`, 'Templates');
     res.json({
       success: true,
-      message: `Template deleted. ${allPaths.size} asset file(s) removed from disk.`
+      message: `Template deleted. ${allPaths.size} asset file(s) cleaned up.`
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

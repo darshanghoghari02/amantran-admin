@@ -29,7 +29,21 @@ async function uploadFileToCloud(localFilePath, queryParams) {
   } else if (type === 'category') {
     folder = `amantran/images/${categorySlug || 'categories'}`;
   } else if (type === 'template') {
-    const cat = categorySlug || 'uncategorized';
+    let cat = categorySlug || 'uncategorized';
+    if (templateSlug) {
+      try {
+        const templatesList = await dbService.getAll('templates');
+        const matchedTemplate = templatesList.find(t => t.slug === templateSlug);
+        if (matchedTemplate && matchedTemplate.categoryId) {
+          const category = await dbService.getOne('categories', matchedTemplate.categoryId);
+          if (category && category.slug) {
+            cat = category.slug;
+          }
+        }
+      } catch (err) {
+        console.warn('⚠️ Failed to dynamically resolve category slug for template upload:', err.message);
+      }
+    }
     const tpl = templateSlug || 'temp_template';
     folder = `amantran/images/${cat}/${tpl}`;
   } else {

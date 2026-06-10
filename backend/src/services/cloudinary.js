@@ -5,16 +5,25 @@ import { v2 as cloudinary } from 'cloudinary';
 // Priority 2: Individual env vars: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
 // The cloudinary SDK auto-reads CLOUDINARY_URL if set, but we also support individual vars.
 
-if (!process.env.CLOUDINARY_URL) {
+if (process.env.CLOUDINARY_URL) {
+  const match = process.env.CLOUDINARY_URL.match(/cloudinary:\/\/([^:]+):([^@]+)@(.+)/);
+  if (match) {
+    cloudinary.config({
+      api_key: match[1],
+      api_secret: match[2],
+      cloud_name: match[3],
+      secure: true
+    });
+  } else {
+    cloudinary.config({ secure: true });
+  }
+} else {
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
     secure: true
   });
-} else {
-  // CLOUDINARY_URL is auto-parsed by the SDK
-  cloudinary.config({ secure: true });
 }
 
 /**

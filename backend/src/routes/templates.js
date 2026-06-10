@@ -64,6 +64,43 @@ function tryRemoveEmptyDir(dirPath) {
   }
 }
 
+// Helper: collect all assets/images from a template object
+function collectTemplateAssets(template) {
+  const paths = new Set();
+  if (!template) return paths;
+
+  // localAssetPaths has the canonical list (flutter-style paths)
+  if (Array.isArray(template.localAssetPaths)) {
+    template.localAssetPaths.forEach(p => { if (p) paths.add(p); });
+  }
+  // Also include thumbnail and previewImages in case they differ
+  if (template.thumbnail) paths.add(template.thumbnail);
+  if (Array.isArray(template.previewImages)) {
+    template.previewImages.forEach(p => { if (p) paths.add(p); });
+  }
+
+  // Dynamic scanning: find any background images or custom sticker/ganesh images in the pages array
+  if (Array.isArray(template.pages)) {
+    template.pages.forEach(page => {
+      if (page.backgroundImage) {
+        paths.add(page.backgroundImage);
+      }
+      if (Array.isArray(page.elements)) {
+        page.elements.forEach(elem => {
+          // Include custom element stickers or uploaded overlay images
+          if (elem.imagePath && (elem.imagePath.includes(`/${template.slug}/`) || elem.imagePath.includes('res.cloudinary.com'))) {
+            paths.add(elem.imagePath);
+          }
+          if (elem.imageUrl && (elem.imageUrl.includes(`/${template.slug}/`) || elem.imageUrl.includes('res.cloudinary.com'))) {
+            paths.add(elem.imageUrl);
+          }
+        });
+      }
+    });
+  }
+  return paths;
+}
+
 const router = express.Router();
 
 // GET all templates (guarded by templates.view)
@@ -177,6 +214,9 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Template not found.' });
     }
 
+    // Collect existing assets before applying updates
+    const oldAssets = collectTemplateAssets(templateToEdit);
+
     // Dynamic Permission check
     let requiredPerm = 'templates.edit';
     const isPublishChange = isActive !== undefined && isActive !== templateToEdit.isActive;
@@ -206,6 +246,15 @@ router.put('/:id', async (req, res) => {
     if (includedInYearlyPlan !== undefined) updates.includedInYearlyPlan = includedInYearlyPlan === true;
 
     const updated = await dbService.update('templates', req.params.id, updates);
+
+    // Collect assets after update and delete obsolete ones
+    const newAssets = collectTemplateAssets(updated);
+    const deletedAssets = [...oldAssets].filter(filePath => !newAssets.has(filePath));
+    if (deletedAssets.length > 0) {
+      const deletePromises = deletedAssets.map(filePath => deleteAssetFile(filePath));
+      await Promise.allSettled(deletePromises);
+      console.log(`🧹 Cleaned up ${deletedAssets.length} obsolete template assets.`);
+    }
     
     if (isPublishChange) {
       await logAuditEvent(userId, `${isActive ? 'Published' : 'Unpublished'} template: ${updated.name}`, 'Templates');
@@ -260,37 +309,7 @@ router.delete('/:id', requirePermission('templates.delete'), async (req, res) =>
     }
 
     // Step 2: Collect all file paths to delete
-    const allPaths = new Set();
-
-    // localAssetPaths has the canonical list (flutter-style paths)
-    if (Array.isArray(template.localAssetPaths)) {
-      template.localAssetPaths.forEach(p => allPaths.add(p));
-    }
-    // Also include thumbnail and previewImages in case they differ
-    if (template.thumbnail) allPaths.add(template.thumbnail);
-    if (Array.isArray(template.previewImages)) {
-      template.previewImages.forEach(p => allPaths.add(p));
-    }
-
-    // Dynamic scanning: find any background images or custom sticker/ganesh images in the pages array
-    if (Array.isArray(template.pages)) {
-      template.pages.forEach(page => {
-        if (page.backgroundImage) {
-          allPaths.add(page.backgroundImage);
-        }
-        if (Array.isArray(page.elements)) {
-          page.elements.forEach(elem => {
-            // Include custom element stickers or uploaded overlay images
-            if (elem.imagePath && (elem.imagePath.includes(`/${template.slug}/`) || elem.imagePath.includes('res.cloudinary.com'))) {
-              allPaths.add(elem.imagePath);
-            }
-            if (elem.imageUrl && (elem.imageUrl.includes(`/${template.slug}/`) || elem.imageUrl.includes('res.cloudinary.com'))) {
-              allPaths.add(elem.imageUrl);
-            }
-          });
-        }
-      });
-    }
+    const allPaths = collectTemplateAssets(template);
 
     // Step 3: Delete each file (supports Cloudinary, Firebase, and local)
     const deletePromises = [];

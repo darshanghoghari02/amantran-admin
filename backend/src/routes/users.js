@@ -103,6 +103,121 @@ router.get('/', requirePermission('users.view'), async (req, res) => {
   }
 });
 
+// GET all app_users (with search query - guarded by users.view)
+router.get('/app-users', requirePermission('users.view'), async (req, res) => {
+  try {
+    const list = await dbService.getAll('app_users');
+    const { query } = req.query;
+
+    // Normalize Firestore field names to a consistent frontend schema
+    let normalized = list.map(u => ({
+      id: u.id,
+      displayName: u.displayName || u.name || 'Anonymous User',
+      name: u.name || u.displayName || '',
+      email: u.email || '',
+      phone: u.phone || '',
+      provider: u.provider || 'phone',
+      profilePhoto: u.profilePhoto || '',
+      accountStatus: u.accountStatus || 'active',
+      // Normalize isBlocked: support both isBlocked field and accountStatus='suspended'
+      isBlocked: u.isBlocked === true || u.accountStatus === 'suspended',
+      invitationCount: u.invitationCount || 0,
+      draftsCount: u.draftsCount || 0,
+      createdAt: getSafeDateString(u.createdAt),
+      lastLoginAt: u.lastLoginAt ? getSafeDateString(u.lastLoginAt) : null
+    }));
+
+    if (query) {
+      const q = query.toLowerCase();
+      normalized = normalized.filter(u =>
+        (u.displayName && u.displayName.toLowerCase().includes(q)) ||
+        (u.email && u.email.toLowerCase().includes(q)) ||
+        (u.phone && u.phone.toLowerCase().includes(q)) ||
+        (u.provider && u.provider.toLowerCase().includes(q))
+      );
+    }
+
+    // Sort by creation date safely
+    normalized.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+    res.json(normalized);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT update app_user details/block status (guarded by users.suspend / users.activate / users.edit)
+router.put('/app-users/:id', async (req, res) => {
+  try {
+    const adminUserId = req.headers['x-user-id'];
+    if (!adminUserId) {
+      return res.status(401).json({ error: 'Missing x-user-id header.' });
+    }
+
+    // Resolve admin permissions
+    const adminPerms = await getUserPermissions(adminUserId);
+    const isSuperAdmin = adminPerms.includes('*');
+
+    const { isBlocked, displayName, email, phone } = req.body;
+
+    const userToEdit = await dbService.getOne('app_users', req.params.id);
+    if (!userToEdit) {
+      return res.status(404).json({ error: 'App user not found.' });
+    }
+
+    // Validate access permission dynamically
+    let requiredPerm = 'users.edit';
+    const isStatusChange = isBlocked !== undefined;
+
+    if (isStatusChange) {
+      requiredPerm = isBlocked ? 'users.suspend' : 'users.activate';
+    }
+
+    if (!isSuperAdmin && !adminPerms.includes(requiredPerm)) {
+      return res.status(403).json({ error: `Forbidden. You do not have the required permission: ${requiredPerm}` });
+    }
+
+    const updates = {};
+    if (isBlocked !== undefined) {
+      updates.isBlocked = isBlocked;
+      updates.status = isBlocked ? 'Suspended' : 'Active';
+    }
+    if (displayName !== undefined) updates.displayName = displayName;
+    if (email !== undefined) updates.email = email;
+    if (phone !== undefined) updates.phone = phone;
+
+    const updated = await dbService.update('app_users', req.params.id, updates);
+
+    // Write audit logs
+    const nameStr = updated.displayName || updated.phone || updated.email || req.params.id;
+    if (isStatusChange) {
+      const actionStr = updated.isBlocked ? 'suspended' : 'activated';
+      await logAuditEvent(adminUserId, `${actionStr.toUpperCase()} app user: ${nameStr}`, 'Users');
+    } else {
+      await logAuditEvent(adminUserId, `Updated app user details for: ${nameStr}`, 'Users');
+    }
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE app_user (guarded by users.delete)
+router.delete('/app-users/:id', requirePermission('users.delete'), async (req, res) => {
+  try {
+    const adminUserId = req.headers['x-user-id'];
+    const userToDelete = await dbService.getOne('app_users', req.params.id);
+    const nameStr = userToDelete ? (userToDelete.displayName || userToDelete.phone || userToDelete.email || 'Unknown') : req.params.id;
+
+    await dbService.delete('app_users', req.params.id);
+    await logAuditEvent(adminUserId, `Deleted app user: ${nameStr}`, 'Users');
+    res.json({ success: true, message: 'App user deleted successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET single user (guarded by users.view or own profile check)
 router.get('/:id', async (req, res) => {
   try {

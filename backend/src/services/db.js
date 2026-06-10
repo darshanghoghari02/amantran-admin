@@ -170,6 +170,14 @@ class DatabaseService {
   async initLocalDb() {
     try {
       await fs.access(LOCAL_DB_PATH);
+      // Auto-migrate: if app_users is missing in existing db.json, add default ones
+      const data = await this.readLocal();
+      if (!data.app_users) {
+        const defaultData = this.getDefaultMockData();
+        data.app_users = defaultData.app_users;
+        await this.writeLocal(data);
+        console.log('✅ Auto-migrated: Seeded app_users into existing local database.');
+      }
     } catch (error) {
       // If db.json doesn't exist, create it with beautiful default mock data
       const defaultDb = this.getDefaultMockData();
@@ -445,6 +453,11 @@ class DatabaseService {
         { id: 'user_1', email: 'vicky.patel@gmail.com', displayName: 'Vicky Patel', role: 'editor', isBlocked: false, invitationCount: 12, draftsCount: 3, createdAt: now },
         { id: 'user_2', email: 'sneha.sharma@yahoo.com', displayName: 'Sneha Sharma', role: 'content_manager', isBlocked: false, invitationCount: 4, draftsCount: 1, createdAt: now },
         { id: 'user_3', email: 'rajesh.shah@hotmail.com', displayName: 'Rajesh Shah', role: 'editor', isBlocked: true, invitationCount: 0, draftsCount: 0, createdAt: now }
+      ],
+      app_users: [
+        { id: 'app_user_1', phone: '+919876543210', email: 'amit.patel@gmail.com', displayName: 'Amit Patel', provider: 'phone', isBlocked: false, invitationCount: 5, draftsCount: 2, createdAt: now },
+        { id: 'app_user_2', phone: '+918765432109', email: 'priya.mehta@yahoo.com', displayName: 'Priya Mehta', provider: 'google', isBlocked: false, invitationCount: 14, draftsCount: 4, createdAt: now },
+        { id: 'app_user_3', phone: '+917654321098', email: 'rahul.sharma@outlook.com', displayName: 'Rahul Sharma', provider: 'google', isBlocked: true, invitationCount: 0, draftsCount: 0, createdAt: now }
       ],
       user_subscriptions: [],
       user_purchases: [],

@@ -54,8 +54,9 @@ requiredDirs.forEach(dir => {
   }
 });
 
-// Serve assets directory statically
+// Serve assets directory statically (including /static as fallback)
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use('/static', express.static(path.join(__dirname, 'assets')));
 
 // Create simple placeholders if not present to avoid broken images
 const createPlaceholderSvg = (filePath, text, width = 400, height = 300) => {

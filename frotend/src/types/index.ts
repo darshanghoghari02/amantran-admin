@@ -123,6 +123,11 @@ export interface User {
   password?: string;
   isBlocked: boolean;
   phoneNumber?: string;
+  phone?: string;
+  provider?: string;
+  profilePhoto?: string;
+  accountStatus?: string;
+  lastLoginAt?: string;
   status?: 'active' | 'suspended';
   invitationCount: number;
   draftsCount: number;

@@ -30,6 +30,7 @@ export default function Fonts({ currentUser }: FontsProps) {
   const [localPath, setLocalPath] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchFonts();
@@ -68,12 +69,23 @@ export default function Fonts({ currentUser }: FontsProps) {
       if (data.success) {
         setLocalPath(data.flutterPath);
         // Auto fill family name from file name if empty
+        let filledFamily = family;
         if (!family) {
           const cleanName = file.name
             .replace(/\.[^/.]+$/, "") // strip extension
             .replace(/[-_]/g, ' ');   // replace dashes with spaces
           setFamily(cleanName);
+          filledFamily = cleanName;
         }
+        
+        // Clear validation errors
+        setErrors(prev => {
+          const copy = { ...prev };
+          delete copy.localPath;
+          if (filledFamily) delete copy.family;
+          return copy;
+        });
+        
         useToastStore.getState().addToast('Font binary uploaded successfully!', 'success');
       } else {
         useToastStore.getState().addToast(data.error || 'Upload failed', 'error');
@@ -86,10 +98,22 @@ export default function Fonts({ currentUser }: FontsProps) {
     }
   };
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!family.trim()) {
+      newErrors.family = 'Font Family Name is required.';
+    }
+    if (!localPath.trim()) {
+      newErrors.localPath = 'Font binary file upload is required.';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!family || !localPath) {
-      alert('Font Family and file path are required.');
+    if (!validateForm()) {
+      useToastStore.getState().addToast('Please resolve the errors in the form.', 'warning');
       return;
     }
 
@@ -191,6 +215,7 @@ export default function Fonts({ currentUser }: FontsProps) {
     setFamily('');
     setLocalPath('');
     setIsActive(true);
+    setErrors({});
     setIsModalOpen(true);
   };
 
@@ -305,10 +330,14 @@ export default function Fonts({ currentUser }: FontsProps) {
               <div className="space-y-2">
                 <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider block">Font binary (.ttf / .otf)</label>
                 
-                <label className="border-2 border-dashed border-wedding-pink-medium/40 hover:bg-wedding-pink-light/10 cursor-pointer p-8 rounded-2xl flex flex-col items-center justify-center transition-all">
+                <label className={`border-2 border-dashed cursor-pointer p-8 rounded-2xl flex flex-col items-center justify-center transition-all ${
+                  errors.localPath 
+                    ? 'border-red-500 bg-red-50/10 hover:bg-red-50/20' 
+                    : 'border-wedding-pink-medium/40 hover:bg-wedding-pink-light/10'
+                }`}>
                   <Upload className="w-8 h-8 text-wedding-pink-dark mb-2" />
-                  <span className="text-sm font-bold text-wedding-charcoal-dark">
-                    {uploading ? 'Processing Binary Upload...' : 'Click to Upload TTF/OTF File'}
+                  <span className="text-sm font-bold text-wedding-charcoal-dark text-center">
+                    {uploading ? 'Processing Binary Upload...' : localPath ? `Binary Uploaded: ${localPath.split('/').pop()}` : 'Click to Upload TTF/OTF File'}
                   </span>
                   <span className="text-[10px] text-gray-500 mt-1">Supports Kap011, Hind Vadodara, Farsan, Rasa formats</span>
                   <input 
@@ -318,6 +347,9 @@ export default function Fonts({ currentUser }: FontsProps) {
                     className="hidden" 
                   />
                 </label>
+                {errors.localPath && (
+                  <p className="text-xs text-red-500 font-semibold mt-1">{errors.localPath}</p>
+                )}
               </div>
 
               {/* Font Family Name */}
@@ -326,10 +358,26 @@ export default function Fonts({ currentUser }: FontsProps) {
                 <input 
                   type="text" 
                   value={family}
-                  onChange={(e) => setFamily(e.target.value)}
+                  onChange={(e) => {
+                    setFamily(e.target.value);
+                    if (errors.family) {
+                      setErrors(prev => {
+                        const copy = { ...prev };
+                        delete copy.family;
+                        return copy;
+                      });
+                    }
+                  }}
                   placeholder="e.g. Hind Vadodara"
-                  className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
+                  className={`w-full px-4 py-3 rounded-2xl bg-white border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 ${
+                    errors.family 
+                      ? 'border-red-500 focus:ring-red-500/20' 
+                      : 'border-wedding-pink-medium/40 focus:ring-wedding-pink-dark/20'
+                  }`}
                 />
+                {errors.family && (
+                  <p className="text-xs text-red-500 font-semibold mt-1">{errors.family}</p>
+                )}
               </div>
 
               {/* Flutter Path (Automatic) */}

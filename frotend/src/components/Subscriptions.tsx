@@ -58,6 +58,7 @@ export default function Subscriptions({ currentUser }: SubscriptionsProps) {
   const [newPlanCustomStartDate, setNewPlanCustomStartDate] = useState('');
   const [newPlanCustomEndDate, setNewPlanCustomEndDate] = useState('');
   const [creating, setCreating] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchInitialData();
@@ -186,14 +187,47 @@ export default function Subscriptions({ currentUser }: SubscriptionsProps) {
     }
   };
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!newPlanName.trim()) {
+      newErrors.newPlanName = 'Plan Title is required.';
+    }
+    const priceNum = Number(newPlanPrice);
+    if (newPlanPrice === undefined || newPlanPrice === null || isNaN(priceNum) || priceNum < 0) {
+      newErrors.newPlanPrice = 'Price must be a non-negative number.';
+    }
+    
+    if (newPlanDurationType !== 'custom') {
+      const daysNum = Number(newPlanDurationDays);
+      if (newPlanDurationDays === undefined || newPlanDurationDays === null || isNaN(daysNum) || daysNum < 1) {
+        newErrors.newPlanDurationDays = 'Duration Days must be a positive number of days (at least 1).';
+      }
+    } else {
+      if (!newPlanCustomStartDate) {
+        newErrors.newPlanCustomStartDate = 'Start Date is required for custom duration.';
+      }
+      if (!newPlanCustomEndDate) {
+        newErrors.newPlanCustomEndDate = 'End Date is required for custom duration.';
+      }
+      if (newPlanCustomStartDate && newPlanCustomEndDate) {
+        if (new Date(newPlanCustomStartDate) > new Date(newPlanCustomEndDate)) {
+          newErrors.newPlanCustomEndDate = 'End Date must be after or equal to Start Date.';
+        }
+      }
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleCreatePlan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!hasPermission('subscriptions.create')) {
       useToastStore.getState().addToast('Access Denied. You lack the "subscriptions.create" permission.', 'warning');
       return;
     }
-    if (!newPlanName) {
-      useToastStore.getState().addToast('Plan name is required.', 'warning');
+    if (!validateForm()) {
+      useToastStore.getState().addToast('Please resolve the errors in the form.', 'warning');
       return;
     }
 
@@ -317,7 +351,7 @@ export default function Subscriptions({ currentUser }: SubscriptionsProps) {
         </div>
         {hasPermission('subscriptions.create') && (
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => { setErrors({}); setIsModalOpen(true); }}
             className="flex items-center gap-2 px-5 py-3 bg-wedding-pink-dark hover:bg-wedding-pink-hover text-white text-xs font-extrabold rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 whitespace-nowrap"
           >
             <PlusCircle className="w-5 h-5" />
@@ -647,10 +681,26 @@ export default function Subscriptions({ currentUser }: SubscriptionsProps) {
                   <input 
                     type="text" 
                     value={newPlanName}
-                    onChange={(e) => setNewPlanName(e.target.value)}
+                    onChange={(e) => {
+                      setNewPlanName(e.target.value);
+                      if (errors.newPlanName) {
+                        setErrors(prev => {
+                          const copy = { ...prev };
+                          delete copy.newPlanName;
+                          return copy;
+                        });
+                      }
+                    }}
                     placeholder="e.g. Quarterly Premium"
-                    className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
+                    className={`w-full px-4 py-3 rounded-2xl bg-white border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 ${
+                      errors.newPlanName 
+                        ? 'border-red-500 focus:ring-red-500/20' 
+                        : 'border-wedding-pink-medium/40 focus:ring-wedding-pink-dark/20'
+                    }`}
                   />
+                  {errors.newPlanName && (
+                    <p className="text-xs text-red-500 font-semibold mt-1">{errors.newPlanName}</p>
+                  )}
                 </div>
 
                 {/* Plan Price */}
@@ -660,9 +710,25 @@ export default function Subscriptions({ currentUser }: SubscriptionsProps) {
                     type="number" 
                     min="0"
                     value={newPlanPrice}
-                    onChange={(e) => setNewPlanPrice(Number(e.target.value))}
-                    className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 font-bold"
+                    onChange={(e) => {
+                      setNewPlanPrice(Number(e.target.value));
+                      if (errors.newPlanPrice) {
+                        setErrors(prev => {
+                          const copy = { ...prev };
+                          delete copy.newPlanPrice;
+                          return copy;
+                        });
+                      }
+                    }}
+                    className={`w-full px-4 py-3 rounded-2xl bg-white border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 font-bold ${
+                      errors.newPlanPrice 
+                        ? 'border-red-500 focus:ring-red-500/20' 
+                        : 'border-wedding-pink-medium/40 focus:ring-wedding-pink-dark/20'
+                    }`}
                   />
+                  {errors.newPlanPrice && (
+                    <p className="text-xs text-red-500 font-semibold mt-1">{errors.newPlanPrice}</p>
+                  )}
                 </div>
               </div>
 
@@ -682,6 +748,14 @@ export default function Subscriptions({ currentUser }: SubscriptionsProps) {
                       else if (val === 'yearly') days = 365;
                       else if (val === 'custom') days = 0;
                       setNewPlanDurationDays(days);
+                      if (val !== 'custom') {
+                        setErrors(prev => {
+                          const copy = { ...prev };
+                          delete copy.newPlanCustomStartDate;
+                          delete copy.newPlanCustomEndDate;
+                          return copy;
+                        });
+                      }
                     }}
                     className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 font-medium"
                   >
@@ -708,9 +782,25 @@ export default function Subscriptions({ currentUser }: SubscriptionsProps) {
                     <input 
                       type="date" 
                       value={newPlanCustomStartDate}
-                      onChange={(e) => setNewPlanCustomStartDate(e.target.value)}
-                      className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
+                      onChange={(e) => {
+                        setNewPlanCustomStartDate(e.target.value);
+                        if (errors.newPlanCustomStartDate) {
+                          setErrors(prev => {
+                            const copy = { ...prev };
+                            delete copy.newPlanCustomStartDate;
+                            return copy;
+                          });
+                        }
+                      }}
+                      className={`w-full px-4 py-3 rounded-2xl bg-white border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 ${
+                        errors.newPlanCustomStartDate 
+                          ? 'border-red-500 focus:ring-red-500/20' 
+                          : 'border-wedding-pink-medium/40 focus:ring-wedding-pink-dark/20'
+                      }`}
                     />
+                    {errors.newPlanCustomStartDate && (
+                      <p className="text-xs text-red-500 font-semibold mt-1">{errors.newPlanCustomStartDate}</p>
+                    )}
                   </div>
                   {/* End Date */}
                   <div className="space-y-1.5">
@@ -718,9 +808,25 @@ export default function Subscriptions({ currentUser }: SubscriptionsProps) {
                     <input 
                       type="date" 
                       value={newPlanCustomEndDate}
-                      onChange={(e) => setNewPlanCustomEndDate(e.target.value)}
-                      className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
+                      onChange={(e) => {
+                        setNewPlanCustomEndDate(e.target.value);
+                        if (errors.newPlanCustomEndDate) {
+                          setErrors(prev => {
+                            const copy = { ...prev };
+                            delete copy.newPlanCustomEndDate;
+                            return copy;
+                          });
+                        }
+                      }}
+                      className={`w-full px-4 py-3 rounded-2xl bg-white border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 ${
+                        errors.newPlanCustomEndDate 
+                          ? 'border-red-500 focus:ring-red-500/20' 
+                          : 'border-wedding-pink-medium/40 focus:ring-wedding-pink-dark/20'
+                      }`}
                     />
+                    {errors.newPlanCustomEndDate && (
+                      <p className="text-xs text-red-500 font-semibold mt-1">{errors.newPlanCustomEndDate}</p>
+                    )}
                   </div>
                 </div>
               )}

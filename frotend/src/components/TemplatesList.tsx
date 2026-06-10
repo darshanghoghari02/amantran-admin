@@ -97,6 +97,7 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
   const [thumbnailPath, setThumbnailPath] = useState('');
   const [bgFiles, setBgFiles] = useState<FileList | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchInitialData();
@@ -155,6 +156,40 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
     );
   };
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!name.trim()) {
+      newErrors.name = 'Template name is required.';
+    }
+    if (!slug.trim()) {
+      newErrors.slug = 'Slug is required.';
+    } else if (!/^[a-z0-9_]+$/.test(slug)) {
+      newErrors.slug = 'Slug can only contain lowercase letters, numbers, and underscores.';
+    }
+    if (!categoryId) {
+      newErrors.categoryId = 'Category selection is required.';
+    }
+    if (isPremium) {
+      const priceNum = Number(singlePurchasePrice);
+      if (singlePurchasePrice === undefined || singlePurchasePrice === null || isNaN(priceNum) || priceNum < 0) {
+        newErrors.singlePurchasePrice = 'Single purchase price must be a non-negative number.';
+      }
+    }
+    
+    // Thumbnail and page background checks
+    if (!editingTemplate) {
+      if (!thumbnailFile) {
+        newErrors.thumbnailFile = 'Thumbnail file is required for new templates.';
+      }
+      if (!bgFiles || bgFiles.length === 0) {
+        newErrors.bgFiles = 'At least one page background file is required for new templates.';
+      }
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingTemplate) {
@@ -169,8 +204,8 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
       }
     }
 
-    if (!name || !slug || !categoryId) {
-      useToastStore.getState().addToast('Template name, slug and category are required.', 'warning');
+    if (!validateForm()) {
+      useToastStore.getState().addToast('Please resolve the errors in the form.', 'warning');
       return;
     }
 
@@ -1952,6 +1987,7 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
     setIncludedInYearlyPlan(tpl.includedInYearlyPlan ?? true);
     setThumbnailFile(null);
     setBgFiles(null);
+    setErrors({});
 
     const initialSelectedPlans: string[] = [];
     if (tpl.includedInMonthlyPlan !== false) initialSelectedPlans.push('monthly');
@@ -1981,6 +2017,7 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
     setThumbnailFile(null);
     setBgFiles(null);
     setSelectedPlanIds(['monthly', 'yearly']);
+    setErrors({});
     setIsModalOpen(true);
   };
 
@@ -2300,10 +2337,33 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
                   <input
                     type="text"
                     value={name}
-                    onChange={(e) => handleNameChange(e.target.value)}
+                    onChange={(e) => {
+                      handleNameChange(e.target.value);
+                      if (errors.name) {
+                        setErrors(prev => {
+                          const copy = { ...prev };
+                          delete copy.name;
+                          return copy;
+                        });
+                      }
+                      if (errors.slug) {
+                        setErrors(prev => {
+                          const copy = { ...prev };
+                          delete copy.slug;
+                          return copy;
+                        });
+                      }
+                    }}
                     placeholder="e.g. Royal Gold Wedding"
-                    className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
+                    className={`w-full px-4 py-3 rounded-2xl bg-white border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 ${
+                      errors.name 
+                        ? 'border-red-500 focus:ring-red-500/20' 
+                        : 'border-wedding-pink-medium/40 focus:ring-wedding-pink-dark/20'
+                    }`}
                   />
+                  {errors.name && (
+                    <p className="text-xs text-red-500 font-semibold mt-1">{errors.name}</p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -2311,10 +2371,26 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
                   <input
                     type="text"
                     value={slug}
-                    onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))}
+                    onChange={(e) => {
+                      setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'));
+                      if (errors.slug) {
+                        setErrors(prev => {
+                          const copy = { ...prev };
+                          delete copy.slug;
+                          return copy;
+                        });
+                      }
+                    }}
                     placeholder="e.g. royal_gold_wedding"
-                    className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark/70 text-sm font-mono focus:outline-none"
+                    className={`w-full px-4 py-3 rounded-2xl text-sm font-mono focus:outline-none focus:ring-2 ${
+                      errors.slug 
+                        ? 'bg-white border-red-500 focus:ring-red-500/20 text-wedding-charcoal-dark' 
+                        : 'bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark/70'
+                    }`}
                   />
+                  {errors.slug && (
+                    <p className="text-xs text-red-500 font-semibold mt-1">{errors.slug}</p>
+                  )}
                 </div>
               </div>
 
@@ -2324,13 +2400,30 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
                   <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Category</label>
                   <select
                     value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
-                    className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
+                    onChange={(e) => {
+                      setCategoryId(e.target.value);
+                      if (errors.categoryId) {
+                        setErrors(prev => {
+                          const copy = { ...prev };
+                          delete copy.categoryId;
+                          return copy;
+                        });
+                      }
+                    }}
+                    className={`w-full px-4 py-3 rounded-2xl bg-white border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 ${
+                      errors.categoryId 
+                        ? 'border-red-500 focus:ring-red-500/20' 
+                        : 'border-wedding-pink-medium/40 focus:ring-wedding-pink-dark/20'
+                    }`}
                   >
+                    <option value="">Select Category</option>
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
+                  {errors.categoryId && (
+                    <p className="text-xs text-red-500 font-semibold mt-1">{errors.categoryId}</p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5 flex flex-col justify-center pl-2">
@@ -2430,10 +2523,26 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
                           type="number"
                           min="0"
                           value={singlePurchasePrice}
-                          onChange={(e) => setSinglePurchasePrice(Math.max(0, parseInt(e.target.value) || 0))}
-                          className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-white border border-wedding-pink-medium/30 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 font-semibold"
+                          onChange={(e) => {
+                            setSinglePurchasePrice(Math.max(0, parseInt(e.target.value) || 0));
+                            if (errors.singlePurchasePrice) {
+                              setErrors(prev => {
+                                const copy = { ...prev };
+                                delete copy.singlePurchasePrice;
+                                return copy;
+                              });
+                            }
+                          }}
+                          className={`w-full pl-8 pr-4 py-2.5 rounded-xl bg-white border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 font-semibold ${
+                            errors.singlePurchasePrice 
+                              ? 'border-red-500 focus:ring-red-500/20' 
+                              : 'border-wedding-pink-medium/30 focus:ring-wedding-pink-dark/20'
+                          }`}
                         />
                       </div>
+                      {errors.singlePurchasePrice && (
+                        <p className="text-xs text-red-500 font-semibold mt-1">{errors.singlePurchasePrice}</p>
+                      )}
                     </div>
 
                     {/* Dynamic Plan Inclusion Checkboxes */}
@@ -2470,36 +2579,70 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Template Thumbnail</label>
-                  <label className="border border-wedding-pink-medium/40 hover:bg-wedding-pink-light/20 cursor-pointer p-4 rounded-2xl flex flex-col items-center justify-center transition-all bg-white">
+                  <label className={`border cursor-pointer p-4 rounded-2xl flex flex-col items-center justify-center transition-all bg-white ${
+                    errors.thumbnailFile 
+                      ? 'border-red-500 hover:bg-red-50/10' 
+                      : 'border-wedding-pink-medium/40 hover:bg-wedding-pink-light/20'
+                  }`}>
                     <Upload className="w-5 h-5 text-wedding-pink-dark mb-1" />
-                    <span className="text-[11px] font-bold text-wedding-charcoal-dark">
+                    <span className="text-[11px] font-bold text-wedding-charcoal-dark text-center">
                       {thumbnailFile ? thumbnailFile.name : 'Choose Thumbnail File'}
                     </span>
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => setThumbnailFile(e.target.files ? e.target.files[0] : null)}
+                      onChange={(e) => {
+                        const file = e.target.files ? e.target.files[0] : null;
+                        setThumbnailFile(file);
+                        if (file && errors.thumbnailFile) {
+                          setErrors(prev => {
+                            const copy = { ...prev };
+                            delete copy.thumbnailFile;
+                            return copy;
+                          });
+                        }
+                      }}
                       className="hidden"
                     />
                   </label>
+                  {errors.thumbnailFile && (
+                    <p className="text-xs text-red-500 font-semibold mt-1">{errors.thumbnailFile}</p>
+                  )}
                 </div>
 
                 {!editingTemplate && (
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Page Backgrounds (Multiple)</label>
-                    <label className="border border-wedding-pink-medium/40 hover:bg-wedding-pink-light/20 cursor-pointer p-4 rounded-2xl flex flex-col items-center justify-center transition-all bg-white">
+                    <label className={`border cursor-pointer p-4 rounded-2xl flex flex-col items-center justify-center transition-all bg-white ${
+                      errors.bgFiles 
+                        ? 'border-red-500 hover:bg-red-50/10' 
+                        : 'border-wedding-pink-medium/40 hover:bg-wedding-pink-light/20'
+                    }`}>
                       <Upload className="w-5 h-5 text-wedding-pink-dark mb-1" />
-                      <span className="text-[11px] font-bold text-wedding-charcoal-dark">
+                      <span className="text-[11px] font-bold text-wedding-charcoal-dark text-center">
                         {bgFiles ? `${bgFiles.length} files selected` : 'Select Page Backgrounds'}
                       </span>
                       <input
                         type="file"
                         accept="image/*"
                         multiple
-                        onChange={(e) => setBgFiles(e.target.files)}
+                        onChange={(e) => {
+                          const files = e.target.files;
+                          setBgFiles(files);
+                          if (files && files.length > 0 && errors.bgFiles) {
+                            setErrors(prev => {
+                              const copy = { ...prev };
+                              delete copy.bgFiles;
+                              return copy;
+                            });
+                          }
+                        }}
                         className="hidden"
                       />
                     </label>
+                    {errors.bgFiles && (
+                      <p className="text-xs text-red-500 font-semibold mt-1">{errors.bgFiles}</p>
+                    )}
                   </div>
                 )}
               </div>

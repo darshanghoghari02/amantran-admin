@@ -84,6 +84,7 @@ export default function Users({ currentUser }: UsersComponentProps) {
   const [customPermissions, setCustomPermissions] = useState<string[]>([]);
   const [isCustomPermissions, setIsCustomPermissions] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Permission helper
   const hasPermission = (permission: string): boolean => {
@@ -130,6 +131,36 @@ export default function Users({ currentUser }: UsersComponentProps) {
     }
   }
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!displayName.trim()) {
+      newErrors.displayName = 'Full Display Name is required.';
+    }
+    if (!email.trim()) {
+      newErrors.email = 'Email Address is required.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = 'Please enter a valid email address.';
+    }
+    
+    if (!editingUser) {
+      if (!password) {
+        newErrors.password = 'Password is required.';
+      } else if (password.length < 6) {
+        newErrors.password = 'Password must be at least 6 characters.';
+      }
+    } else {
+      if (password && password.length < 6) {
+        newErrors.password = 'Password must be at least 6 characters.';
+      }
+    }
+    
+    if (!roleId) {
+      newErrors.roleId = 'Assigned System Role is required.';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const openAddModal = () => {
     setEditingUser(null);
     setDisplayName('');
@@ -140,6 +171,7 @@ export default function Users({ currentUser }: UsersComponentProps) {
     setCustomPermissions(matchedRole?.permissions || []);
     setIsCustomPermissions(false);
     setPassword('');
+    setErrors({});
     setIsModalOpen(true);
   };
 
@@ -158,7 +190,8 @@ export default function Users({ currentUser }: UsersComponentProps) {
       const matchedRole = roles.find(r => r.id === userRoleId);
       setCustomPermissions(matchedRole?.permissions || []);
     }
-    setPassword(user.password || '');
+    setPassword('');
+    setErrors({});
     setIsModalOpen(true);
   };
 
@@ -221,8 +254,8 @@ export default function Users({ currentUser }: UsersComponentProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!displayName || !email || !roleId) {
-      addToast('Name, email, and role are required.', 'warning');
+    if (!validateForm()) {
+      addToast('Please resolve the errors in the form.', 'warning');
       return;
     }
 
@@ -486,7 +519,7 @@ export default function Users({ currentUser }: UsersComponentProps) {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+            <form onSubmit={handleSubmit} noValidate className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
               
               {/* Display Name */}
               <div className="space-y-1.5">
@@ -494,11 +527,26 @@ export default function Users({ currentUser }: UsersComponentProps) {
                 <input
                   type="text"
                   value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
+                  onChange={(e) => {
+                    setDisplayName(e.target.value);
+                    if (errors.displayName) {
+                      setErrors(prev => {
+                        const copy = { ...prev };
+                        delete copy.displayName;
+                        return copy;
+                      });
+                    }
+                  }}
                   placeholder="e.g. Ramesh Patel"
-                  className="w-full px-4 py-3 rounded-xl bg-[#FFF5F6]/40 border border-[#FFCAD2]/60 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/25 focus:bg-white font-semibold transition-all"
-                  required
+                  className={`w-full px-4 py-3 rounded-xl bg-[#FFF5F6]/40 border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:bg-white font-semibold transition-all ${
+                    errors.displayName 
+                      ? 'border-red-500 focus:ring-red-500/20' 
+                      : 'border-[#FFCAD2]/60 focus:ring-wedding-pink-dark/25'
+                  }`}
                 />
+                {errors.displayName && (
+                  <p className="text-xs text-red-500 font-semibold mt-1">{errors.displayName}</p>
+                )}
               </div>
 
               {/* Email Address */}
@@ -507,11 +555,26 @@ export default function Users({ currentUser }: UsersComponentProps) {
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (errors.email) {
+                      setErrors(prev => {
+                        const copy = { ...prev };
+                        delete copy.email;
+                        return copy;
+                      });
+                    }
+                  }}
                   placeholder="user@amantran.com"
-                  className="w-full px-4 py-3 rounded-xl bg-[#FFF5F6]/40 border border-[#FFCAD2]/60 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/25 focus:bg-white font-semibold transition-all"
-                  required
+                  className={`w-full px-4 py-3 rounded-xl bg-[#FFF5F6]/40 border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:bg-white font-semibold transition-all ${
+                    errors.email 
+                      ? 'border-red-500 focus:ring-red-500/20' 
+                      : 'border-[#FFCAD2]/60 focus:ring-wedding-pink-dark/25'
+                  }`}
                 />
+                {errors.email && (
+                  <p className="text-xs text-red-500 font-semibold mt-1">{errors.email}</p>
+                )}
               </div>
 
               {/* Password */}
@@ -522,11 +585,26 @@ export default function Users({ currentUser }: UsersComponentProps) {
                 <input
                   type="text"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (errors.password) {
+                      setErrors(prev => {
+                        const copy = { ...prev };
+                        delete copy.password;
+                        return copy;
+                      });
+                    }
+                  }}
                   placeholder="Enter login password..."
-                  className="w-full px-4 py-3 rounded-xl bg-[#FFF5F6]/40 border border-[#FFCAD2]/60 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/25 focus:bg-white font-mono font-semibold transition-all"
-                  required={!editingUser}
+                  className={`w-full px-4 py-3 rounded-xl bg-[#FFF5F6]/40 border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:bg-white font-mono font-semibold transition-all ${
+                    errors.password 
+                      ? 'border-red-500 focus:ring-red-500/20' 
+                      : 'border-[#FFCAD2]/60 focus:ring-wedding-pink-dark/25'
+                  }`}
                 />
+                {errors.password && (
+                  <p className="text-xs text-red-500 font-semibold mt-1">{errors.password}</p>
+                )}
               </div>
 
               {/* Role Assignment */}
@@ -547,19 +625,32 @@ export default function Users({ currentUser }: UsersComponentProps) {
                   onChange={(e) => {
                     const newRoleId = e.target.value;
                     setRoleId(newRoleId);
+                    if (errors.roleId) {
+                      setErrors(prev => {
+                        const copy = { ...prev };
+                        delete copy.roleId;
+                        return copy;
+                      });
+                    }
                     if (!isCustomPermissions) {
                       const matchedRole = roles.find(r => r.id === newRoleId);
                       setCustomPermissions(matchedRole?.permissions || []);
                     }
                   }}
                   disabled={!!editingUser && !canAssignRoles}
-                  className="w-full px-4 py-3 rounded-xl bg-[#FFF5F6]/40 border border-[#FFCAD2]/60 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/25 font-semibold transition-all disabled:opacity-60 disabled:bg-gray-50"
-                  required
+                  className={`w-full px-4 py-3 rounded-xl bg-[#FFF5F6]/40 border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 font-semibold transition-all disabled:opacity-60 disabled:bg-gray-50 ${
+                    errors.roleId 
+                      ? 'border-red-500 focus:ring-red-500/20' 
+                      : 'border-[#FFCAD2]/60 focus:ring-wedding-pink-dark/25'
+                  }`}
                 >
                   {roles.map(r => (
                     <option key={r.id} value={r.id}>{r.name}</option>
                   ))}
                 </select>
+                {errors.roleId && (
+                  <p className="text-xs text-red-500 font-semibold mt-1">{errors.roleId}</p>
+                )}
               </div>
 
               {/* Custom Override Toggle — only visible if user has manage_permissions right */}

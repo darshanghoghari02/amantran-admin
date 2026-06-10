@@ -29,6 +29,7 @@ export default function Languages({ currentUser }: LanguagesProps) {
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchLanguages();
@@ -49,10 +50,24 @@ export default function Languages({ currentUser }: LanguagesProps) {
     }
   }
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!name.trim()) {
+      newErrors.name = 'Language Name is required.';
+    }
+    if (!code.trim()) {
+      newErrors.code = 'ISO Code is required.';
+    } else if (!/^[a-z]{2,3}$/.test(code)) {
+      newErrors.code = 'ISO Code must be 2 or 3 lowercase letters (e.g. "gu", "hi", "en").';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code || !name) {
-      useToastStore.getState().addToast('Code and Language Name are required.', 'warning');
+    if (!validateForm()) {
+      useToastStore.getState().addToast('Please resolve the errors in the form.', 'warning');
       return;
     }
 
@@ -150,6 +165,7 @@ export default function Languages({ currentUser }: LanguagesProps) {
     setCode('');
     setName('');
     setIsActive(true);
+    setErrors({});
     setIsModalOpen(true);
   };
 
@@ -257,10 +273,26 @@ export default function Languages({ currentUser }: LanguagesProps) {
                 <input 
                   type="text" 
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (errors.name) {
+                      setErrors(prev => {
+                        const copy = { ...prev };
+                        delete copy.name;
+                        return copy;
+                      });
+                    }
+                  }}
                   placeholder="e.g. Gujarati"
-                  className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
+                  className={`w-full px-4 py-3 rounded-2xl bg-white border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 ${
+                    errors.name 
+                      ? 'border-red-500 focus:ring-red-500/20' 
+                      : 'border-wedding-pink-medium/40 focus:ring-wedding-pink-dark/20'
+                  }`}
                 />
+                {errors.name && (
+                  <p className="text-xs text-red-500 font-semibold mt-1">{errors.name}</p>
+                )}
               </div>
 
               {/* Code */}
@@ -269,10 +301,26 @@ export default function Languages({ currentUser }: LanguagesProps) {
                 <input 
                   type="text" 
                   value={code}
-                  onChange={(e) => setCode(e.target.value.toLowerCase())}
+                  onChange={(e) => {
+                    setCode(e.target.value.toLowerCase());
+                    if (errors.code) {
+                      setErrors(prev => {
+                        const copy = { ...prev };
+                        delete copy.code;
+                        return copy;
+                      });
+                    }
+                  }}
                   placeholder="e.g. gu"
-                  className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20 font-mono"
+                  className={`w-full px-4 py-3 rounded-2xl bg-white border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 font-mono ${
+                    errors.code 
+                      ? 'border-red-500 focus:ring-red-500/20' 
+                      : 'border-wedding-pink-medium/40 focus:ring-wedding-pink-dark/20'
+                  }`}
                 />
+                {errors.code && (
+                  <p className="text-xs text-red-500 font-semibold mt-1">{errors.code}</p>
+                )}
               </div>
 
               {/* Display State */}

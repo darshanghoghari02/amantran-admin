@@ -33,6 +33,7 @@ export default function Categories({ currentUser }: CategoriesProps) {
   const [isActive, setIsActive] = useState(true);
   const [imageUrl, setImageUrl] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchCategories();
@@ -53,6 +54,26 @@ export default function Categories({ currentUser }: CategoriesProps) {
     }
   }
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!name.trim()) {
+      newErrors.name = 'Category name is required.';
+    }
+    if (!slug.trim()) {
+      newErrors.slug = 'Slug is required.';
+    } else if (!/^[a-z0-9_]+$/.test(slug)) {
+      newErrors.slug = 'Slug can only contain lowercase letters, numbers, and underscores.';
+    }
+    const orderNum = parseInt(displayOrder);
+    if (!displayOrder.trim()) {
+      newErrors.displayOrder = 'Display sequence is required.';
+    } else if (isNaN(orderNum) || orderNum < 1) {
+      newErrors.displayOrder = 'Display sequence must be a positive number.';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const openAddModal = () => {
     setEditingId(null);
     setName('');
@@ -60,6 +81,7 @@ export default function Categories({ currentUser }: CategoriesProps) {
     setDisplayOrder('1');
     setIsActive(true);
     setImageUrl('');
+    setErrors({});
     setIsModalOpen(true);
   };
 
@@ -70,14 +92,30 @@ export default function Categories({ currentUser }: CategoriesProps) {
     setDisplayOrder(String(cat.displayOrder));
     setIsActive(cat.isActive);
     setImageUrl(cat.imageUrl);
+    setErrors({});
     setIsModalOpen(true);
   };
 
   const handleNameChange = (val: string) => {
     setName(val);
+    if (errors.name) {
+      setErrors(prev => {
+        const copy = { ...prev };
+        delete copy.name;
+        return copy;
+      });
+    }
     // Auto-generate clean slug
     if (!editingId) {
-      setSlug(val.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_'));
+      const generatedSlug = val.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_');
+      setSlug(generatedSlug);
+      if (errors.slug) {
+        setErrors(prev => {
+          const copy = { ...prev };
+          delete copy.slug;
+          return copy;
+        });
+      }
     }
   };
 
@@ -114,8 +152,8 @@ export default function Categories({ currentUser }: CategoriesProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !slug) {
-      useToastStore.getState().addToast('Name and slug are required.', 'warning');
+    if (!validateForm()) {
+      useToastStore.getState().addToast('Please resolve the errors in the form.', 'warning');
       return;
     }
 
@@ -322,8 +360,15 @@ export default function Categories({ currentUser }: CategoriesProps) {
                   value={name}
                   onChange={(e) => handleNameChange(e.target.value)}
                   placeholder="e.g. Royal Wedding"
-                  className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
+                  className={`w-full px-4 py-3 rounded-2xl bg-white border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 ${
+                    errors.name 
+                      ? 'border-red-500 focus:ring-red-500/20' 
+                      : 'border-wedding-pink-medium/40 focus:ring-wedding-pink-dark/20'
+                  }`}
                 />
+                {errors.name && (
+                  <p className="text-xs text-red-500 font-semibold mt-1">{errors.name}</p>
+                )}
               </div>
 
               {/* Slug Path Input */}
@@ -332,11 +377,30 @@ export default function Categories({ currentUser }: CategoriesProps) {
                 <input 
                   type="text" 
                   value={slug}
-                  onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))}
+                  onChange={(e) => {
+                    const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+                    setSlug(val);
+                    if (errors.slug) {
+                      setErrors(prev => {
+                        const copy = { ...prev };
+                        delete copy.slug;
+                        return copy;
+                      });
+                    }
+                  }}
                   placeholder="e.g. royal_wedding"
                   disabled={!!editingId}
-                  className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-wedding-pink-medium/30 text-wedding-charcoal-dark/70 text-sm font-mono focus:outline-none"
+                  className={`w-full px-4 py-3 rounded-2xl text-sm font-mono focus:outline-none focus:ring-2 ${
+                    editingId 
+                      ? 'bg-gray-50 border-wedding-pink-medium/30 text-wedding-charcoal-dark/70' 
+                      : errors.slug 
+                      ? 'bg-white border-red-500 focus:ring-red-500/20 text-wedding-charcoal-dark' 
+                      : 'bg-white border-wedding-pink-medium/40 focus:ring-wedding-pink-dark/20 text-wedding-charcoal-dark'
+                  }`}
                 />
+                {errors.slug && (
+                  <p className="text-xs text-red-500 font-semibold mt-1">{errors.slug}</p>
+                )}
                 <p className="text-[10px] text-gray-500 font-medium leading-relaxed">
                   * Creates storage sub-path automatically: <code className="font-mono bg-wedding-pink-light/45 px-1 py-0.5 text-wedding-pink-dark rounded">assets/images/{slug || 'slug'}/</code>
                 </p>
@@ -349,9 +413,25 @@ export default function Categories({ currentUser }: CategoriesProps) {
                   <input 
                     type="number" 
                     value={displayOrder}
-                    onChange={(e) => setDisplayOrder(e.target.value)}
-                    className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 focus:ring-wedding-pink-dark/20"
+                    onChange={(e) => {
+                      setDisplayOrder(e.target.value);
+                      if (errors.displayOrder) {
+                        setErrors(prev => {
+                          const copy = { ...prev };
+                          delete copy.displayOrder;
+                          return copy;
+                        });
+                      }
+                    }}
+                    className={`w-full px-4 py-3 rounded-2xl bg-white border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 ${
+                      errors.displayOrder 
+                        ? 'border-red-500 focus:ring-red-500/20' 
+                        : 'border-wedding-pink-medium/40 focus:ring-wedding-pink-dark/20'
+                    }`}
                   />
+                  {errors.displayOrder && (
+                    <p className="text-xs text-red-500 font-semibold mt-1">{errors.displayOrder}</p>
+                  )}
                 </div>
                 
                 <div className="space-y-1.5 flex flex-col justify-center">

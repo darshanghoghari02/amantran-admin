@@ -61,6 +61,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const [charts, setCharts] = useState<any>(cmsCache.dashboard?.charts || null);
   const [loading, setLoading] = useState(!cmsCache.dashboard);
 
+  const [fetchingGrowth, setFetchingGrowth] = useState(false);
+  const [fetchingDistribution, setFetchingDistribution] = useState(false);
+
   // Dynamic filter states
   const [userGrowthRange, setUserGrowthRange] = useState('6m');
   const [userGrowthStart, setUserGrowthStart] = useState('');
@@ -70,9 +73,42 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const [distributionStart, setDistributionStart] = useState('');
   const [distributionEnd, setDistributionEnd] = useState('');
 
+  // Keep track of previous values to identify what changed
+  const prevGrowthRange = React.useRef(userGrowthRange);
+  const prevGrowthStart = React.useRef(userGrowthStart);
+  const prevGrowthEnd = React.useRef(userGrowthEnd);
+
+  const prevDistRange = React.useRef(distributionRange);
+  const prevDistStart = React.useRef(distributionStart);
+  const prevDistEnd = React.useRef(distributionEnd);
+
   useEffect(() => {
+    // Check if parameters changed from previous render
+    const growthChanged = 
+      prevGrowthRange.current !== userGrowthRange ||
+      prevGrowthStart.current !== userGrowthStart ||
+      prevGrowthEnd.current !== userGrowthEnd;
+
+    const distChanged = 
+      prevDistRange.current !== distributionRange ||
+      prevDistStart.current !== distributionStart ||
+      prevDistEnd.current !== distributionEnd;
+
+    // Update refs to current values immediately
+    prevGrowthRange.current = userGrowthRange;
+    prevGrowthStart.current = userGrowthStart;
+    prevGrowthEnd.current = userGrowthEnd;
+    prevDistRange.current = distributionRange;
+    prevDistStart.current = distributionStart;
+    prevDistEnd.current = distributionEnd;
+
     async function fetchDashboardData(silent = false) {
       if (!silent && !cmsCache.dashboard) setLoading(true);
+      
+      // If a specific chart filter changed, show local loader
+      if (growthChanged) setFetchingGrowth(true);
+      if (distChanged) setFetchingDistribution(true);
+
       try {
         const growthParams = new URLSearchParams({
           userGrowthRange,
@@ -105,6 +141,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         }
       } finally {
         setLoading(false);
+        setFetchingGrowth(false);
+        setFetchingDistribution(false);
       }
     }
     fetchDashboardData(cmsCache.dashboard ? true : false);
@@ -200,7 +238,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       {/* Dynamic Data Charts Container */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* SVG User Growth Chart */}
-        <div className="bg-wedding-card border border-wedding-pink-medium/20 p-8 rounded-3xl shadow-xs space-y-4">
+        <div className="bg-wedding-card border border-wedding-pink-medium/20 p-8 rounded-3xl shadow-xs space-y-4 relative">
+          {fetchingGrowth && (
+            <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] rounded-3xl flex flex-col items-center justify-center gap-2 z-10 animate-fadeIn">
+              <div className="w-8 h-8 border-3 border-wedding-pink-medium border-t-wedding-pink-dark rounded-full animate-spin"></div>
+              <span className="text-[10px] font-bold text-wedding-pink-dark uppercase tracking-wider">Refreshing Users...</span>
+            </div>
+          )}
           <div className="flex justify-between items-center gap-4 flex-wrap">
             <div>
               <h4 className="text-lg font-bold text-wedding-charcoal-dark tracking-tight">Active User Growth</h4>
@@ -331,7 +375,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </div>
 
         {/* SVG Templates by Category Distribution */}
-        <div className="bg-wedding-card border border-wedding-pink-medium/20 p-8 rounded-3xl shadow-xs space-y-4">
+        <div className="bg-wedding-card border border-wedding-pink-medium/20 p-8 rounded-3xl shadow-xs space-y-4 relative">
+          {fetchingDistribution && (
+            <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] rounded-3xl flex flex-col items-center justify-center gap-2 z-10 animate-fadeIn">
+              <div className="w-8 h-8 border-3 border-wedding-pink-medium border-t-wedding-pink-dark rounded-full animate-spin"></div>
+              <span className="text-[10px] font-bold text-wedding-pink-dark uppercase tracking-wider">Refreshing Templates...</span>
+            </div>
+          )}
           <div className="flex justify-between items-center gap-4 flex-wrap">
             <div>
               <h4 className="text-lg font-bold text-wedding-charcoal-dark tracking-tight">Template Distribution</h4>

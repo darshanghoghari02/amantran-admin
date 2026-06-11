@@ -107,13 +107,24 @@ const router = express.Router();
 router.get('/', requirePermission('templates.view'), async (req, res) => {
   try {
     const list = await dbService.getAll('templates');
-    // Optional filter by category
+    const activeLangs = await dbService.getAll('languages');
+    const activeNames = activeLangs.filter(l => l.isActive).map(l => l.name);
+    if (!activeNames.includes('English')) activeNames.push('English');
+
+    let filtered = list;
     const { categoryId } = req.query;
     if (categoryId) {
-      const filtered = list.filter(t => t.categoryId === categoryId);
-      return res.json(filtered);
+      filtered = list.filter(t => t.categoryId === categoryId);
     }
-    res.json(list);
+
+    const cleaned = filtered.map(t => {
+      if (t.languages) {
+        t.languages = t.languages.filter(lang => activeNames.includes(lang));
+      }
+      return t;
+    });
+
+    res.json(cleaned);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -126,6 +137,15 @@ router.get('/:id', requirePermission('templates.view'), async (req, res) => {
     if (!template) {
       return res.status(404).json({ error: 'Template not found' });
     }
+
+    const activeLangs = await dbService.getAll('languages');
+    const activeNames = activeLangs.filter(l => l.isActive).map(l => l.name);
+    if (!activeNames.includes('English')) activeNames.push('English');
+
+    if (template.languages) {
+      template.languages = template.languages.filter(lang => activeNames.includes(lang));
+    }
+
     res.json(template);
   } catch (error) {
     res.status(500).json({ error: error.message });

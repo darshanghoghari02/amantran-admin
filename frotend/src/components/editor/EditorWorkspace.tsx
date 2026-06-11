@@ -55,6 +55,27 @@ export default function EditorWorkspace({ onClose, currentUser }: EditorWorkspac
   const [savingManual, setSavingManual] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isTranslatingPage, setIsTranslatingPage] = useState(false);
+  const [activeSystemLanguages, setActiveSystemLanguages] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function loadActiveLanguages() {
+      try {
+        const res = await fetch(`${API_URL}/api/languages`, {
+          headers: { 'x-user-id': currentUser?.id || 'admin_super' }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            const activeLangs = data.filter((l: any) => l.isActive).map((l: any) => l.name);
+            setActiveSystemLanguages(activeLangs);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load active languages for editor dropdown:', err);
+      }
+    }
+    loadActiveLanguages();
+  }, [currentUser]);
 
   // Auto-save is active — changes persist to DB automatically with a 2-second debounce.
   // Manual "Save Draft" is still available for explicit saves.
@@ -344,11 +365,13 @@ export default function EditorWorkspace({ onClose, currentUser }: EditorWorkspac
               onChange={(e) => handleLanguageChange(e.target.value)}
               className="bg-transparent text-xs font-bold text-gray-300 focus:outline-none cursor-pointer pr-1"
             >
-              {(template.languages && template.languages.length > 0 ? template.languages : ['English', 'Hindi', 'Gujarati', 'Marathi', 'Tamil', 'Urdu']).map((lang) => (
-                <option key={lang} value={lang} className="bg-wedding-charcoal-dark text-white font-bold">
-                  {lang}
-                </option>
-              ))}
+              {(template.languages && template.languages.length > 0 ? template.languages : ['English', 'Hindi', 'Gujarati', 'Marathi', 'Tamil', 'Urdu'])
+                .filter((lang) => activeSystemLanguages.length === 0 || activeSystemLanguages.includes(lang) || lang === 'English')
+                .map((lang) => (
+                  <option key={lang} value={lang} className="bg-wedding-charcoal-dark text-white font-bold">
+                    {lang}
+                  </option>
+                ))}
             </select>
           </div>
 
@@ -399,6 +422,7 @@ export default function EditorWorkspace({ onClose, currentUser }: EditorWorkspac
           selectedLanguage={selectedLanguage}
           setSelectedLanguage={setSelectedLanguage}
           onClose={() => setIsPreviewOpen(false)}
+          activeLanguages={activeSystemLanguages}
         />
       )}
     </div>

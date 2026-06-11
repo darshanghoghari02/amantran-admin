@@ -21,6 +21,7 @@ interface PreviewModalProps {
   selectedLanguage: string;
   setSelectedLanguage: (lang: string) => void;
   onClose: () => void;
+  activeLanguages?: string[];
 }
 
 /* Helper to render punctuation and English digits with a clean sans-serif font when a legacy font (like KAP series) is active */
@@ -47,7 +48,8 @@ export default function PreviewModal({
   template, 
   selectedLanguage, 
   setSelectedLanguage, 
-  onClose 
+  onClose,
+  activeLanguages
 }: PreviewModalProps) {
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -190,11 +192,13 @@ export default function PreviewModal({
               onChange={(e) => setSelectedLanguage(e.target.value)}
               className="bg-transparent text-xs font-bold text-gray-200 focus:outline-none cursor-pointer pr-2"
             >
-              {template.languages.map((lang) => (
-                <option key={lang} value={lang} className="bg-[#171013] text-white font-bold">
-                  {lang}
-                </option>
-              ))}
+              {(template.languages || [])
+                .filter((lang) => !activeLanguages || activeLanguages.length === 0 || activeLanguages.includes(lang) || lang === 'English')
+                .map((lang) => (
+                  <option key={lang} value={lang} className="bg-[#171013] text-white font-bold">
+                    {lang}
+                  </option>
+                ))}
             </select>
           </div>
 

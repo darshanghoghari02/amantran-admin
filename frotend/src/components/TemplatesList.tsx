@@ -1981,7 +1981,9 @@ export default function TemplatesList({ onOpenEditor, currentUser }: TemplatesLi
     setIsPremium(tpl.isPremium);
     setIsActive(tpl.isActive);
     setSelectedFonts(tpl.fonts || []);
-    setSelectedLangs(tpl.languages || []);
+    const activeNames = languages.map(l => l.name);
+    const filteredLangs = (tpl.languages || []).filter(lang => activeNames.includes(lang) || lang === 'English');
+    setSelectedLangs(filteredLangs);
     setSinglePurchasePrice(tpl.singlePurchasePrice ?? 49);
     setIncludedInMonthlyPlan(tpl.includedInMonthlyPlan ?? true);
     setIncludedInYearlyPlan(tpl.includedInYearlyPlan ?? true);

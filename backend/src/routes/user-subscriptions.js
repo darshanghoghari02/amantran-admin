@@ -16,15 +16,38 @@ function safeDate(val) {
 
 // Helper to check trial eligibility
 async function checkTrialEligible(userId) {
+  if (dbService.isFirebase) {
+    try {
+      const snapshot = await dbService.db.collection('user_subscriptions').where('userId', '==', userId).limit(1).get();
+      return snapshot.empty;
+    } catch (e) {
+      console.error('Error checking trial eligibility in Firestore:', e);
+    }
+  }
   const allSubs = await dbService.getAll('user_subscriptions');
   const userSubs = allSubs.filter(s => s.userId === userId);
   return userSubs.length === 0;
 }
 
 // On-the-fly expiry and auto-renewal evaluator
-async function getOrUpdateActiveSubscription(userId) {
-  const allSubs = await dbService.getAll('user_subscriptions');
-  const userSubs = allSubs.filter(s => s.userId === userId);
+async function getOrUpdateActiveSubscription(userId, preFetchedSubs = null) {
+  let userSubs;
+  if (preFetchedSubs) {
+    userSubs = preFetchedSubs.filter(s => s.userId === userId);
+  } else if (dbService.isFirebase) {
+    try {
+      const snapshot = await dbService.db.collection('user_subscriptions').where('userId', '==', userId).get();
+      userSubs = [];
+      snapshot.forEach(doc => userSubs.push({ id: doc.id, ...doc.data() }));
+    } catch (e) {
+      console.error('Error querying user subscription in Firestore:', e);
+      const allSubs = await dbService.getAll('user_subscriptions');
+      userSubs = allSubs.filter(s => s.userId === userId);
+    }
+  } else {
+    const allSubs = await dbService.getAll('user_subscriptions');
+    userSubs = allSubs.filter(s => s.userId === userId);
+  }
 
   if (userSubs.length === 0) {
     return {
@@ -114,7 +137,7 @@ router.get('/', requirePermission('users.view'), async (req, res) => {
 
     for (const u of users) {
       // Run dynamic checks for user
-      const activeSub = await getOrUpdateActiveSubscription(u.id);
+      const activeSub = await getOrUpdateActiveSubscription(u.id, allSubs);
       
       const userSubs = allSubs
         .filter(s => s.userId === u.id)

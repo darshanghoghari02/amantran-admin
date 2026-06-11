@@ -8,6 +8,37 @@ interface LanguagesProps {
   currentUser?: User;
 }
 
+import ISO6391 from 'iso-639-1';
+
+// Safe wrapper to handle ESM / CommonJS default export differences across Node.js/Next.js/Webpack
+const getIsoLib = () => {
+  const lib = ISO6391 as any;
+  if (lib && typeof lib.getAllCodes === 'function') {
+    return lib;
+  }
+  if (lib && lib.default && typeof lib.default.getAllCodes === 'function') {
+    return lib.default;
+  }
+  return null;
+};
+
+const ISO = getIsoLib();
+
+interface PresetLanguage {
+  name: string;
+  code: string;
+  nativeName: string;
+}
+
+// Generate all standard languages and sort by name
+const PRESET_LANGUAGES: PresetLanguage[] = ISO 
+  ? ISO.getAllCodes().map((code: string) => ({
+      name: ISO.getName(code),
+      code: code,
+      nativeName: ISO.getNativeName(code)
+    })).sort((a: any, b: any) => a.name.localeCompare(b.name))
+  : [];
+
 export default function Languages({ currentUser }: LanguagesProps) {
   const hasPermission = (perm: string): boolean => {
     if (!currentUser) return false;
@@ -30,6 +61,7 @@ export default function Languages({ currentUser }: LanguagesProps) {
   const [name, setName] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [selectedPresetIndex, setSelectedPresetIndex] = useState(-1);
 
   useEffect(() => {
     fetchLanguages();
@@ -166,6 +198,7 @@ export default function Languages({ currentUser }: LanguagesProps) {
     setName('');
     setIsActive(true);
     setErrors({});
+    setSelectedPresetIndex(-1);
     setIsModalOpen(true);
   };
 
@@ -267,8 +300,37 @@ export default function Languages({ currentUser }: LanguagesProps) {
             </div>
             
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              {/* Language Name */}
+              {/* Select Language Preset */}
               <div className="space-y-1.5">
+                <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Select Language Preset</label>
+                <select
+                  value={selectedPresetIndex}
+                  onChange={(e) => {
+                    const idx = Number(e.target.value);
+                    setSelectedPresetIndex(idx);
+                    if (idx >= 0) {
+                      setName(PRESET_LANGUAGES[idx].name);
+                      setCode(PRESET_LANGUAGES[idx].code);
+                    } else if (idx === -1) {
+                      setName('');
+                      setCode('');
+                    }
+                    setErrors({});
+                  }}
+                  className="w-full px-4 py-3 rounded-2xl bg-white border border-wedding-pink-medium/40 focus:ring-wedding-pink-dark/20 text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 font-semibold"
+                >
+                  <option value="-1">Select a language preset...</option>
+                  {PRESET_LANGUAGES.map((lang, idx) => (
+                    <option key={idx} value={idx}>
+                      {lang.name} {lang.nativeName && lang.nativeName !== lang.name ? `(${lang.nativeName})` : ''} — {lang.code.toUpperCase()}
+                    </option>
+                  ))}
+                  <option value="-2">Custom (Type manually...)</option>
+                </select>
+              </div>
+
+              {/* Language Name */}
+              <div className="space-y-1.5 animate-fadeIn">
                 <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Language Name</label>
                 <input 
                   type="text" 
@@ -284,11 +346,7 @@ export default function Languages({ currentUser }: LanguagesProps) {
                     }
                   }}
                   placeholder="e.g. Gujarati"
-                  className={`w-full px-4 py-3 rounded-2xl bg-white border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 ${
-                    errors.name 
-                      ? 'border-red-500 focus:ring-red-500/20' 
-                      : 'border-wedding-pink-medium/40 focus:ring-wedding-pink-dark/20'
-                  }`}
+                  className={`w-full px-4 py-3 rounded-2xl border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 bg-white border-wedding-pink-medium/40 focus:ring-wedding-pink-dark/20 ${errors.name ? 'border-red-500 focus:ring-red-500/20' : ''}`}
                 />
                 {errors.name && (
                   <p className="text-xs text-red-500 font-semibold mt-1">{errors.name}</p>
@@ -296,7 +354,7 @@ export default function Languages({ currentUser }: LanguagesProps) {
               </div>
 
               {/* Code */}
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 animate-fadeIn">
                 <label className="text-xs font-bold text-wedding-charcoal-light uppercase tracking-wider">Locale ISO Code</label>
                 <input 
                   type="text" 
@@ -312,11 +370,7 @@ export default function Languages({ currentUser }: LanguagesProps) {
                     }
                   }}
                   placeholder="e.g. gu"
-                  className={`w-full px-4 py-3 rounded-2xl bg-white border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 font-mono ${
-                    errors.code 
-                      ? 'border-red-500 focus:ring-red-500/20' 
-                      : 'border-wedding-pink-medium/40 focus:ring-wedding-pink-dark/20'
-                  }`}
+                  className={`w-full px-4 py-3 rounded-2xl border text-wedding-charcoal-dark text-sm focus:outline-none focus:ring-2 font-mono bg-white border-wedding-pink-medium/40 focus:ring-wedding-pink-dark/20 ${errors.code ? 'border-red-500 focus:ring-red-500/20' : ''}`}
                 />
                 {errors.code && (
                   <p className="text-xs text-red-500 font-semibold mt-1">{errors.code}</p>

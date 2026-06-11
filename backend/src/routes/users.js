@@ -223,8 +223,12 @@ router.put('/app-users/:id', async (req, res) => {
     if (isBlocked !== undefined) {
       updates.isBlocked = isBlocked;
       updates.status = isBlocked ? 'Suspended' : 'Active';
+      updates.accountStatus = isBlocked ? 'suspended' : 'active';
     }
-    if (displayName !== undefined) updates.displayName = displayName;
+    if (displayName !== undefined) {
+      updates.displayName = displayName;
+      updates.name = displayName;
+    }
     if (email !== undefined) updates.email = email;
     if (phone !== undefined) updates.phone = phone;
 

@@ -280,4 +280,104 @@ router.get('/charts', async (req, res) => {
   }
 });
 
+// GET subscription analytics summary
+router.get('/subscription-summary', async (req, res) => {
+  try {
+    const allSubs = await dbService.getAll('user_subscriptions');
+    const allTxns = await dbService.getAll('transactions');
+
+    const now = new Date();
+    
+    // Group subs by userId
+    const userMap = {};
+    for (const sub of allSubs) {
+      const uId = sub.userId;
+      if (!userMap[uId]) {
+        userMap[uId] = [];
+      }
+      userMap[uId].push(sub);
+    }
+
+    let totalActive = 0;
+    let totalCancelled = 0;
+    let activeTrials = 0;
+    const subscribers = new Set();
+
+    for (const uId in userMap) {
+      const subs = userMap[uId];
+      // Sort newest first
+      subs.sort((a, b) => new Date(b.startDate || b.createdAt) - new Date(a.startDate || a.createdAt));
+      const latest = subs[0];
+
+      if (latest.isActive && new Date(latest.expiryDate) > now) {
+        subscribers.add(uId);
+        if (latest.status === 'active') {
+          totalActive++;
+        } else if (latest.status === 'trial') {
+          activeTrials++;
+          totalActive++;
+        } else if (latest.status === 'cancelled') {
+          totalCancelled++;
+          totalActive++;
+        }
+      }
+    }
+
+    const totalSubscribers = subscribers.size;
+
+    // Monthly subscription revenue
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const startOfMonth = new Date(currentYear, currentMonth, 1);
+    
+    const monthlyRevenue = allTxns
+      .filter(t => t.type === 'subscription' && t.status === 'success' && new Date(t.timestamp || t.createdAt) >= startOfMonth)
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+    // Churn rate = cancelled / total active
+    const totalActiveSubscribersCount = totalActive; // active + trial + cancelled
+    const churnRate = totalActiveSubscribersCount > 0 
+      ? Number(((totalCancelled / totalActiveSubscribersCount) * 100).toFixed(1))
+      : 0.0;
+
+    // Monthly growth trend over the last 6 months
+    const growthTrend = [];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+      const label = months[d.getMonth()] + " '" + String(d.getFullYear()).slice(-2);
+      
+      // Count active subscribers as of end of that month
+      let activeAsOf = 0;
+      for (const uId in userMap) {
+        const subs = userMap[uId];
+        // Find if there was any active record at that time
+        const activeAtEnd = subs.some(s => {
+          const start = new Date(s.startDate);
+          const expiry = new Date(s.expiryDate);
+          return start <= endOfMonth && expiry >= endOfMonth && s.status !== 'expired';
+        });
+        if (activeAtEnd) {
+          activeAsOf++;
+        }
+      }
+      growthTrend.push({
+        month: label,
+        subscribers: activeAsOf
+      });
+    }
+
+    res.json({
+      totalSubscribers,
+      activeTrials,
+      monthlyRevenue,
+      churnRate,
+      growthTrend
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

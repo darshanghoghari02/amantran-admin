@@ -69,7 +69,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const [distributionEnd, setDistributionEnd] = useState('');
 
   useEffect(() => {
-    async function fetchDashboardData() {
+    async function fetchDashboardData(silent = false) {
+      if (!silent) setLoading(true);
       try {
         const growthParams = new URLSearchParams({
           userGrowthRange,
@@ -98,10 +99,17 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         setStats(MOCK_STATS_FALLBACK);
         setCharts(MOCK_CHARTS_FALLBACK);
       } finally {
-        setLoading(false);
+        if (!silent) setLoading(false);
       }
     }
-    fetchDashboardData();
+    fetchDashboardData(false);
+
+    // Set up polling interval to keep dashboard statistics in sync in real-time (every 5 seconds)
+    const intervalId = setInterval(() => {
+      fetchDashboardData(true);
+    }, 5000);
+
+    return () => clearInterval(intervalId);
   }, [userGrowthRange, userGrowthStart, userGrowthEnd, distributionRange, distributionStart, distributionEnd]);
 
   if (loading || !stats) {

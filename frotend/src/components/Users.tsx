@@ -125,11 +125,18 @@ export default function Users({ currentUser }: UsersComponentProps) {
   };
 
   useEffect(() => {
-    fetchInitialData();
+    fetchInitialData(false);
+    
+    // Set up polling interval to keep data in sync in real-time (every 5 seconds)
+    const intervalId = setInterval(() => {
+      fetchInitialData(true);
+    }, 5000);
+
+    return () => clearInterval(intervalId);
   }, [searchQuery, selectedRoleFilter, activeTab]);
 
-  async function fetchInitialData() {
-    setLoading(true);
+  async function fetchInitialData(silent = false) {
+    if (!silent) setLoading(true);
     try {
       const params = new URLSearchParams();
       if (searchQuery) params.append('query', searchQuery);
@@ -162,9 +169,9 @@ export default function Users({ currentUser }: UsersComponentProps) {
       }
     } catch (error) {
       console.error('Failed to load user directories:', error);
-      addToast('Failed to load user directory.', 'error');
+      if (!silent) addToast('Failed to load user directory.', 'error');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -387,7 +394,7 @@ export default function Users({ currentUser }: UsersComponentProps) {
       // Check if user already had a subscription record
       const hasSubRecord = !!subSelectedUser.subscription;
       const endpoint = hasSubRecord
-        ? `${API_URL}/api/user-subscriptions/${subSelectedUser.id}`
+        ? `${API_URL}/api/user-subscriptions/${subSelectedUser.subscription.id}`
         : `${API_URL}/api/user-subscriptions`;
       
       const method = hasSubRecord ? 'PUT' : 'POST';
@@ -424,7 +431,7 @@ export default function Users({ currentUser }: UsersComponentProps) {
   };
 
   const handleRevokeSubscription = async () => {
-    if (!subSelectedUser) return;
+    if (!subSelectedUser || !subSelectedUser.subscription) return;
     if (!confirm('Are you sure you want to revoke this user\'s subscription? This will immediately suspend their premium access.')) return;
     
     setSubRevoking(true);
@@ -432,7 +439,7 @@ export default function Users({ currentUser }: UsersComponentProps) {
       const headers = {
         'x-user-id': currentUser?.id || 'admin_super'
       };
-      const res = await fetch(`${API_URL}/api/user-subscriptions/${subSelectedUser.id}`, {
+      const res = await fetch(`${API_URL}/api/user-subscriptions/${subSelectedUser.subscription.id}`, {
         method: 'DELETE',
         headers
       });

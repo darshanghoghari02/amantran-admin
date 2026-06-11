@@ -482,7 +482,12 @@ class DatabaseService {
     await this.initPromise;
     if (this.isFirebase) {
       try {
-        const snapshot = await this.db.collection(collectionName).get();
+        let snapshot;
+        if (collectionName === 'ratings') {
+          snapshot = await this.db.collectionGroup('ratings').get();
+        } else {
+          snapshot = await this.db.collection(collectionName).get();
+        }
         const list = [];
         snapshot.forEach(doc => {
           list.push({ id: doc.id, ...doc.data() });

@@ -54,10 +54,12 @@ const MOCK_CHARTS_FALLBACK = {
   ]
 };
 
+import { cmsCache } from '@/config/cache';
+
 export default function Dashboard({ onNavigate }: DashboardProps) {
-  const [stats, setStats] = useState<any>(null);
-  const [charts, setCharts] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<any>(cmsCache.dashboard?.stats || null);
+  const [charts, setCharts] = useState<any>(cmsCache.dashboard?.charts || null);
+  const [loading, setLoading] = useState(!cmsCache.dashboard);
 
   // Dynamic filter states
   const [userGrowthRange, setUserGrowthRange] = useState('6m');
@@ -70,7 +72,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   useEffect(() => {
     async function fetchDashboardData(silent = false) {
-      if (!silent) setLoading(true);
+      if (!silent && !cmsCache.dashboard) setLoading(true);
       try {
         const growthParams = new URLSearchParams({
           userGrowthRange,
@@ -94,15 +96,18 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         
         setStats(summaryData);
         setCharts(chartsData);
+        cmsCache.dashboard = { stats: summaryData, charts: chartsData };
       } catch (error) {
         console.error('Failed to load dashboard analytics, using offline fallback:', error);
-        setStats(MOCK_STATS_FALLBACK);
-        setCharts(MOCK_CHARTS_FALLBACK);
+        if (!cmsCache.dashboard) {
+          setStats(MOCK_STATS_FALLBACK);
+          setCharts(MOCK_CHARTS_FALLBACK);
+        }
       } finally {
-        if (!silent) setLoading(false);
+        setLoading(false);
       }
     }
-    fetchDashboardData(false);
+    fetchDashboardData(cmsCache.dashboard ? true : false);
 
     // Set up polling interval to keep dashboard statistics in sync in real-time (every 5 seconds)
     const intervalId = setInterval(() => {

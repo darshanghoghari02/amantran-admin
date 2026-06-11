@@ -1,4 +1,5 @@
 import { API_URL } from '@/config';
+import { cmsCache } from '@/config/cache';
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Trash2, CheckCircle2, XCircle, Upload, Type } from 'lucide-react';
 import { CustomFont, User } from '../types';
@@ -21,8 +22,8 @@ export default function Fonts({ currentUser }: FontsProps) {
     'Content-Type': 'application/json',
     'x-user-id': currentUser?.id || 'admin_super'
   };
-  const [fonts, setFonts] = useState<CustomFont[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [fonts, setFonts] = useState<CustomFont[]>(cmsCache.fonts || []);
+  const [loading, setLoading] = useState(!cmsCache.fonts);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Form State
@@ -42,10 +43,12 @@ export default function Fonts({ currentUser }: FontsProps) {
         headers: { 'x-user-id': currentUser?.id || 'admin_super' }
       });
       const data = await res.json();
-      setFonts(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setFonts(list);
+      cmsCache.fonts = list;
     } catch (error) {
       console.error('Failed to load fonts:', error);
-      setFonts([]);
+      if (!cmsCache.fonts) setFonts([]);
     } finally {
       setLoading(false);
     }

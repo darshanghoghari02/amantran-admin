@@ -1,6 +1,7 @@
 'use client';
 
 import { API_URL } from '@/config';
+import { cmsCache } from '@/config/cache';
 import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, Save, Check, RefreshCw, AlertCircle, HelpCircle, 
@@ -66,11 +67,11 @@ export default function Subscriptions({ currentUser }: SubscriptionsProps) {
   const [activeSubTab, setActiveSubTab] = useState<'config' | 'analytics'>('config');
 
   // Plan configuration states
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>(cmsCache.subscriptions || []);
+  const [categories, setCategories] = useState<Category[]>(cmsCache.categories || []);
   const [templates, setTemplates] = useState<Template[]>([]);
   
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cmsCache.subscriptions);
   const [savingPlanId, setSavingPlanId] = useState<string | null>(null);
   const [saveSuccessId, setSaveSuccessId] = useState<string | null>(null);
 
@@ -140,6 +141,7 @@ export default function Subscriptions({ currentUser }: SubscriptionsProps) {
   }, [activeSubTab]);
 
   async function fetchInitialData() {
+    if (!cmsCache.subscriptions) setLoading(true);
     try {
       const headers = { 'x-user-id': currentUser?.id || 'admin_super' };
       const [resPlans, resCats, resTpls] = await Promise.all([
@@ -156,6 +158,8 @@ export default function Subscriptions({ currentUser }: SubscriptionsProps) {
       setPlans(loadedPlans);
       setCategories(Array.isArray(catsData) ? catsData : []);
       setTemplates(Array.isArray(tplsData) ? tplsData : []);
+      cmsCache.subscriptions = loadedPlans;
+      if (Array.isArray(catsData)) cmsCache.categories = catsData;
 
       // Initialize edit states for each plan
       const initialEditStates: typeof editStates = {};

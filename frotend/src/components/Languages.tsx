@@ -1,4 +1,5 @@
 import { API_URL } from '@/config';
+import { cmsCache } from '@/config/cache';
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Trash2, CheckCircle2, XCircle, Globe } from 'lucide-react';
 import { Language, User } from '../types';
@@ -52,8 +53,8 @@ export default function Languages({ currentUser }: LanguagesProps) {
     'Content-Type': 'application/json',
     'x-user-id': currentUser?.id || 'admin_super'
   };
-  const [languages, setLanguages] = useState<Language[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [languages, setLanguages] = useState<Language[]>(cmsCache.languages || []);
+  const [loading, setLoading] = useState(!cmsCache.languages);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Form State
@@ -73,10 +74,12 @@ export default function Languages({ currentUser }: LanguagesProps) {
         headers: { 'x-user-id': currentUser?.id || 'admin_super' }
       });
       const data = await res.json();
-      setLanguages(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setLanguages(list);
+      cmsCache.languages = list;
     } catch (error) {
       console.error('Failed to load languages:', error);
-      setLanguages([]);
+      if (!cmsCache.languages) setLanguages([]);
     } finally {
       setLoading(false);
     }

@@ -8,6 +8,8 @@ interface CategoriesProps {
   currentUser?: User;
 }
 
+import { cmsCache } from '@/config/cache';
+
 export default function Categories({ currentUser }: CategoriesProps) {
   const hasPermission = (perm: string): boolean => {
     if (!currentUser) return false;
@@ -21,8 +23,8 @@ export default function Categories({ currentUser }: CategoriesProps) {
     'Content-Type': 'application/json',
     'x-user-id': currentUser?.id || 'admin_super'
   };
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>(cmsCache.categories || []);
+  const [loading, setLoading] = useState(!cmsCache.categories);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Form State
@@ -45,10 +47,12 @@ export default function Categories({ currentUser }: CategoriesProps) {
         headers: { 'x-user-id': currentUser?.id || 'admin_super' }
       });
       const data = await res.json();
-      setCategories(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setCategories(list);
+      cmsCache.categories = list;
     } catch (error) {
       console.error('Failed to load categories:', error);
-      setCategories([]);
+      if (!cmsCache.categories) setCategories([]);
     } finally {
       setLoading(false);
     }

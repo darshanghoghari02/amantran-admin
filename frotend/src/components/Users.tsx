@@ -1,6 +1,7 @@
 'use client';
 
 import { API_URL } from '@/config';
+import { cmsCache } from '@/config/cache';
 import React, { useState, useEffect } from 'react';
 import {
   Search,
@@ -75,13 +76,13 @@ interface UsersComponentProps {
 
 export default function Users({ currentUser }: UsersComponentProps) {
   const { addToast } = useToastStore();
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[]>(cmsCache.users?.staff || []);
   const [roles, setRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cmsCache.users);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState('');
   const [activeTab, setActiveTab] = useState<'staff' | 'app_users'>('staff');
-  const [appUsers, setAppUsers] = useState<User[]>([]);
+  const [appUsers, setAppUsers] = useState<User[]>(cmsCache.users?.mobile || []);
 
   // User Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -136,7 +137,7 @@ export default function Users({ currentUser }: UsersComponentProps) {
   }, [searchQuery, selectedRoleFilter, activeTab]);
 
   async function fetchInitialData(silent = false) {
-    if (!silent) setLoading(true);
+    if (!silent && !cmsCache.users) setLoading(true);
     try {
       const params = new URLSearchParams();
       if (searchQuery) params.append('query', searchQuery);
@@ -151,27 +152,33 @@ export default function Users({ currentUser }: UsersComponentProps) {
         if (selectedRoleFilter) params.append('role', selectedRoleFilter);
         const resUsers = await fetch(`${API_URL}/api/users?${params.toString()}`, { headers });
         const usersData = await resUsers.json();
-        setUsers(Array.isArray(usersData) ? usersData : []);
+        const staffList = Array.isArray(usersData) ? usersData : [];
+        setUsers(staffList);
         
         // Fetch app users count (unfiltered/unpaged) for the tab count badge
         const resAppUsers = await fetch(`${API_URL}/api/users/app-users`, { headers });
         const appUsersData = await resAppUsers.json();
-        setAppUsers(Array.isArray(appUsersData) ? appUsersData : []);
+        const mobileList = Array.isArray(appUsersData) ? appUsersData : [];
+        setAppUsers(mobileList);
+        cmsCache.users = { staff: staffList, mobile: mobileList };
       } else {
         const resAppUsers = await fetch(`${API_URL}/api/users/app-users?${params.toString()}`, { headers });
         const appUsersData = await resAppUsers.json();
-        setAppUsers(Array.isArray(appUsersData) ? appUsersData : []);
+        const mobileList = Array.isArray(appUsersData) ? appUsersData : [];
+        setAppUsers(mobileList);
 
         // Fetch staff users count (unfiltered/unpaged) for the tab count badge
         const resUsers = await fetch(`${API_URL}/api/users`, { headers });
         const usersData = await resUsers.json();
-        setUsers(Array.isArray(usersData) ? usersData : []);
+        const staffList = Array.isArray(usersData) ? usersData : [];
+        setUsers(staffList);
+        cmsCache.users = { staff: staffList, mobile: mobileList };
       }
     } catch (error) {
       console.error('Failed to load user directories:', error);
       if (!silent) addToast('Failed to load user directory.', 'error');
     } finally {
-      if (!silent) setLoading(false);
+      setLoading(false);
     }
   }
 

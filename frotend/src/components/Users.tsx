@@ -394,7 +394,7 @@ export default function Users({ currentUser }: UsersComponentProps) {
       // Check if user already had a subscription record
       const hasSubRecord = !!subSelectedUser.subscription;
       const endpoint = hasSubRecord
-        ? `${API_URL}/api/user-subscriptions/${subSelectedUser.subscription.id}`
+        ? `${API_URL}/api/user-subscriptions/${subSelectedUser.subscription!.id}`
         : `${API_URL}/api/user-subscriptions`;
       
       const method = hasSubRecord ? 'PUT' : 'POST';
